@@ -39,17 +39,17 @@ class Player;
 
 namespace Trinity
 {
-    struct VisibleNotifier
+    struct TRINITY_DLL_DECL VisibleNotifier
     {
-        Player &i_player;
+        Camera& i_camera;
         UpdateData i_data;
-        std::set<Unit*> i_visibleNow;
-        Player::ClientGUIDs vis_guids;
+        Player::ClientGUIDs i_clientGUIDs;
+        std::set<WorldObject*> i_visibleNow;
 
-        VisibleNotifier(Player &player) : i_player(player), vis_guids(player.m_clientGUIDs) {}
-
+        explicit VisibleNotifier(Camera &c) : i_camera(c), i_clientGUIDs(c.GetOwner()->m_clientGUIDs) {}
         template<class T> void Visit(GridRefManager<T> &m);
-        void SendToSelf(void);
+        void Visit(CameraMapType &m) {}
+        void Notify(void);
     };
 
     struct TRINITY_DLL_DECL VisibleChangesNotifier
@@ -58,50 +58,27 @@ namespace Trinity
 
         explicit VisibleChangesNotifier(WorldObject &object) : i_object(object) {}
         template<class T> void Visit(GridRefManager<T> &) {}
-        void Visit(PlayerMapType &);
-        void Visit(CreatureMapType &);
-        void Visit(DynamicObjectMapType &);
+        void Visit(CameraMapType &);
     };
 
-    struct PlayerRelocationNotifier : public VisibleNotifier
+    struct TRINITY_DLL_DECL PlayerRelocationNotifier
     {
-        PlayerRelocationNotifier(Player &pl) : VisibleNotifier(pl) {}
-
-        template<class T> void Visit(GridRefManager<T> &m) { VisibleNotifier::Visit(m); }
-        void Visit(CreatureMapType &);
+        Player &i_player;
+        PlayerRelocationNotifier(Player &pl) : i_player(pl) {}
+        template<class T> void Visit(GridRefManager<T> &) {}
         void Visit(PlayerMapType &);
+        void Visit(CreatureMapType &);
     };
 
-    struct CreatureRelocationNotifier
+    struct TRINITY_DLL_DECL CreatureRelocationNotifier
     {
         Creature &i_creature;
         CreatureRelocationNotifier(Creature &c) : i_creature(c) {}
         template<class T> void Visit(GridRefManager<T> &) {}
-        void Visit(CreatureMapType &);
-        void Visit(PlayerMapType &);
+        #ifdef WIN32
+        template<> void Visit(PlayerMapType &);
+        #endif
     };
-
-    struct DelayedUnitRelocation
-    {
-        Map &i_map;
-        Cell &cell;
-        CellPair &p;
-        const float i_radius;
-        DelayedUnitRelocation(Cell &c, CellPair &pair, Map &map, float radius) :
-            cell(c), p(pair), i_map(map), i_radius(radius) {}
-        template<class T> void Visit(GridRefManager<T> &) {}
-        void Visit(CreatureMapType &);
-        void Visit(PlayerMapType   &);
-    };
-
-     struct AIRelocationNotifier
-     {
-        Unit &i_unit;
-        bool isCreature;
-        explicit AIRelocationNotifier(Unit &unit) : i_unit(unit), isCreature(unit.GetTypeId() == TYPEID_UNIT)  {}
-        template<class T> void Visit(GridRefManager<T> &) {}
-        void Visit(CreatureMapType &);
-     };
 
     struct TRINITY_DLL_DECL GridUpdater
     {
@@ -125,46 +102,58 @@ namespace Trinity
         void Visit(CorpseMapType &m) { updateObjects<Corpse>(m); }
     };
 
-    struct TRINITY_DLL_DECL Deliverer
+    struct TRINITY_DLL_DECL MessageDeliverer
     {
-        WorldObject &i_source;
+        Player &i_player;
         WorldPacket *i_message;
-        std::set<uint64> plr_list;
-        bool i_toPossessor;
         bool i_toSelf;
-        float i_dist;
-        Deliverer(WorldObject &src, WorldPacket *msg, bool to_possessor, bool to_self, float dist = 0.0f) : i_source(src), i_message(msg), i_toPossessor(to_possessor), i_toSelf(to_self), i_dist(dist) {}
-        void Visit(PlayerMapType &m);
-        void Visit(CreatureMapType &m);
-        void Visit(DynamicObjectMapType &m);
-        virtual void VisitObject(Player* plr) = 0;
-        void SendPacket(Player* plr);
+        MessageDeliverer(Player &pl, WorldPacket *msg, bool to_self) : i_player(pl), i_message(msg), i_toSelf(to_self) {}
+        void Visit(CameraMapType &m);
         template<class SKIP> void Visit(GridRefManager<SKIP> &) {}
     };
 
-    struct TRINITY_DLL_DECL MessageDeliverer : public Deliverer
+    struct MessageDelivererExcept
     {
-        MessageDeliverer(Player &pl, WorldPacket *msg, bool to_possessor, bool to_self) : Deliverer(pl, msg, to_possessor, to_self) {}
-        void VisitObject(Player* plr);
+        WorldPacket*  i_message;
+        Player const* i_skipped_receiver;
+
+        MessageDelivererExcept(WorldPacket *msg, Player const* skipped)
+            : i_message(msg), i_skipped_receiver(skipped) {}
+
+        void Visit(CameraMapType &m);
+        template<class SKIP> void Visit(GridRefManager<SKIP> &) {}
     };
 
-    struct TRINITY_DLL_DECL ObjectMessageDeliverer : public Deliverer
+    struct TRINITY_DLL_DECL ObjectMessageDeliverer
     {
-        explicit ObjectMessageDeliverer(WorldObject &src, WorldPacket *msg, bool to_possessor) : Deliverer(src, msg, to_possessor, false) {}
-        void VisitObject(Player* plr) { SendPacket(plr); }
+        WorldPacket *i_message;
+        explicit ObjectMessageDeliverer(WorldPacket *msg) : i_message(msg) {}
+        void Visit(CameraMapType &m);
+        template<class SKIP> void Visit(GridRefManager<SKIP> &) {}
     };
 
-    struct TRINITY_DLL_DECL MessageDistDeliverer : public Deliverer
+    struct TRINITY_DLL_DECL MessageDistDeliverer
     {
+        Player &i_player;
+        WorldPacket *i_message;
+        bool i_toSelf;
         bool i_ownTeamOnly;
-        MessageDistDeliverer(Player &pl, WorldPacket *msg, bool to_possessor, float dist, bool to_self, bool ownTeamOnly) : Deliverer(pl, msg, to_possessor, to_self, dist), i_ownTeamOnly(ownTeamOnly) {}
-        void VisitObject(Player* plr);
+        float i_dist;
+
+        MessageDistDeliverer(Player &pl, WorldPacket *msg, float dist, bool to_self, bool ownTeamOnly)
+            : i_player(pl), i_message(msg), i_toSelf(to_self), i_ownTeamOnly(ownTeamOnly), i_dist(dist) {}
+        void Visit(CameraMapType &m);
+        template<class SKIP> void Visit(GridRefManager<SKIP> &) {}
     };
 
-    struct TRINITY_DLL_DECL ObjectMessageDistDeliverer : public Deliverer
+    struct TRINITY_DLL_DECL ObjectMessageDistDeliverer
     {
-        ObjectMessageDistDeliverer(WorldObject &obj, WorldPacket *msg, bool to_possessor, float dist) : Deliverer(obj, msg, to_possessor, false, dist) {}
-        void VisitObject(Player* plr) { SendPacket(plr); }
+        WorldObject &i_object;
+        WorldPacket *i_message;
+        float i_dist;
+        ObjectMessageDistDeliverer(WorldObject &obj, WorldPacket *msg, float dist) : i_object(obj), i_message(msg), i_dist(dist) {}
+        void Visit(CameraMapType &m);
+        template<class SKIP> void Visit(GridRefManager<SKIP> &) {}
     };
 
     struct TRINITY_DLL_DECL ObjectUpdater
@@ -174,6 +163,7 @@ namespace Trinity
         template<class T> void Visit(GridRefManager<T> &m);
         void Visit(PlayerMapType &) {}
         void Visit(CorpseMapType &) {}
+        void Visit(CameraMapType &) {}
         void Visit(CreatureMapType &);
     };
 
@@ -467,6 +457,25 @@ namespace Trinity
         template<class NOT_INTERESTED> void Visit(GridRefManager<NOT_INTERESTED> &) {}
     };
 
+    template<class Do>
+    struct TRINITY_DLL_DECL CameraDistWorker
+    {
+        WorldObject const* i_searcher;
+        float i_dist;
+        Do& i_do;
+
+        CameraDistWorker(WorldObject const* searcher, float _dist, Do& _do)
+            : i_searcher(searcher), i_dist(_dist), i_do(_do) {}
+
+        void Visit(CameraMapType &m)
+        {
+            for(CameraMapType::iterator itr=m.begin(); itr != m.end(); ++itr)
+                if (itr->getSource()->GetBody()->IsWithinDist(i_searcher,i_dist))
+                    i_do(itr->getSource()->GetOwner());
+        }
+        template<class NOT_INTERESTED> void Visit(GridRefManager<NOT_INTERESTED> &) {}
+    };
+
     // CHECKS && DO classes
 
     // WorldObject check classes
@@ -705,7 +714,7 @@ namespace Trinity
             bool operator()(Unit* u)
             {
                 if (u->isTargetableForAttack() && i_obj->IsWithinDistInMap(u, i_range) &&
-                    !i_funit->IsFriendlyTo(u) && u->isVisibleForOrDetect(i_funit,false) )
+                    !i_funit->IsFriendlyTo(u) && u->isVisibleForOrDetect(i_funit,i_funit,false) )
                 {
                     i_range = i_obj->GetDistance(u);        // use found unit range as new range limit for next check
                     return true;

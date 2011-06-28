@@ -60,6 +60,7 @@ void DynamicObject::RemoveFromWorld()
     {
         WorldObject::RemoveFromWorld();
         GetMap()->RemoveFromObjMap(GetGUID());
+        GetViewPoint().Event_RemovedFromWorld();
     }
 }
 
@@ -152,11 +153,8 @@ void DynamicObject::Delay(int32 delaytime)
             (*iunit)->DelayAura(m_spellId, m_effIndex, delaytime);
 }
 
-bool DynamicObject::isVisibleForInState(Player const* u, bool inVisibleList) const
+bool DynamicObject::isVisibleForInState(Player const* u, WorldObject const* viewPoint, bool inVisibleList) const
 {
-    const WorldObject* viewPoint = u->GetFarsightTarget();
-    if (!viewPoint || !u->HasFarsightVision()) viewPoint = u;
-
     return IsInWorld() && u->IsInWorld() && (IsWithinDistInMap(viewPoint, World::GetMaxVisibleDistanceForObject()+(inVisibleList ? World::GetVisibleObjectGreyDistance() : 0.0f), false)
         || GetCasterGUID() == u->GetGUID());
 }

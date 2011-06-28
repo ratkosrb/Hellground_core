@@ -39,6 +39,8 @@ SET(game_STAT_SRCS
    BattleGroundHandler.cpp
    BattleGroundMgr.cpp
    BattleGroundMgr.h
+   Camera.h
+   Camera.cpp
    Cell.h
    CellImpl.h
    Channel.cpp

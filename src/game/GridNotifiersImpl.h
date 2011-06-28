@@ -30,25 +30,113 @@
 #include "SpellAuras.h"
 
 template<class T>
-inline void
-Trinity::VisibleNotifier::Visit(GridRefManager<T> &m)
+inline void Trinity::VisibleNotifier::Visit(GridRefManager<T> &m)
 {
     for(typename GridRefManager<T>::iterator iter = m.begin(); iter != m.end(); ++iter)
     {
-        vis_guids.erase(iter->getSource()->GetGUID());
-        i_player.UpdateVisibilityOf(iter->getSource(),i_data,i_visibleNow);
+        i_camera.UpdateVisibilityOf(iter->getSource(), i_data, i_visibleNow);
+        i_clientGUIDs.erase(iter->getSource()->GetGUID());
     }
 }
 
-inline void
-Trinity::ObjectUpdater::Visit(CreatureMapType &m)
+inline void Trinity::ObjectUpdater::Visit(CreatureMapType &m)
 {
     for (CreatureMapType::iterator iter=m.begin(); iter != m.end(); ++iter)
+    {
         if (iter->getSource()->IsInWorld() && !iter->getSource()->isSpiritService())
         {
             WorldObject::UpdateHelper helper(iter->getSource());
             helper.Update(i_timeDiff); 
         }
+    }
+}
+
+inline void Trinity::PlayerRelocationNotifier::Visit(PlayerMapType &m)
+{
+    for (PlayerMapType::iterator iter = m.begin(); iter != m.end(); ++iter)
+    {
+        if (&i_player==iter->getSource())
+            continue;
+
+        // visibility for players updated by ObjectAccessor::UpdateVisibilityFor calls in appropriate places
+
+        // Cancel Trade
+        if (i_player.GetTrader()==iter->getSource())
+                                                            // iteraction distance
+            if (!i_player.IsWithinDistInMap(iter->getSource(), INTERACTION_DISTANCE))
+                i_player.GetSession()->SendCancelTrade();   // will clode both side trade windows
+    }
+}
+
+inline void PlayerCreatureRelocationWorker(Player* pl, Creature* c)
+{
+    // Creature AI reaction
+
+    // hacky exception for Sunblade Lookout, Shattered Sun Bombardier and Brutallus
+    if (pl->isInFlight() && c->GetEntry() != 25132 && c->GetEntry() != 25144 && c->GetEntry() != 25158)
+        return;
+
+    if (!c->hasUnitState(UNIT_STAT_FLEEING) && c->HasReactState(REACT_AGGRESSIVE) && !c->hasUnitState(UNIT_STAT_SIGHTLESS))
+    {
+        if (c->AI() /*&& c->AI()->IsVisible(pl)*/ && !c->IsInEvadeMode())
+            c->AI()->MoveInLineOfSight_Safe(pl);
+    }
+}
+
+inline void CreatureCreatureRelocationWorker(Creature* c1, Creature* c2)
+{
+    if (!c1->hasUnitState(UNIT_STAT_FLEEING) && c1->HasReactState(REACT_AGGRESSIVE) && !c1->hasUnitState(UNIT_STAT_SIGHTLESS))
+    {
+        if (c1->AI() /*&& c->AI()->IsVisible(pl)*/ && !c1->IsInEvadeMode())
+            c1->AI()->MoveInLineOfSight_Safe(c2);
+    }
+
+    if (!c2->hasUnitState(UNIT_STAT_FLEEING) && c2->HasReactState(REACT_AGGRESSIVE) && !c2->hasUnitState(UNIT_STAT_SIGHTLESS))
+    {
+        if (c2->AI() /*&& c->AI()->IsVisible(pl)*/ && !c2->IsInEvadeMode())
+            c2->AI()->MoveInLineOfSight_Safe(c1);
+    }
+}
+
+inline void Trinity::PlayerRelocationNotifier::Visit(CreatureMapType &m)
+{
+    if (!i_player.isAlive() || i_player.isInFlight())
+        return;
+
+    for (CreatureMapType::iterator iter = m.begin(); iter != m.end(); ++iter)
+    {
+        Creature* c = iter->getSource();
+        if (c->isAlive())
+            PlayerCreatureRelocationWorker(&i_player, c);
+    }
+}
+
+template<>
+inline void Trinity::CreatureRelocationNotifier::Visit(PlayerMapType &m)
+{
+    if (!i_creature.isAlive())
+        return;
+
+    for (PlayerMapType::iterator iter=m.begin(); iter != m.end(); ++iter)
+    {
+        Player* player = iter->getSource();
+        if (player->isAlive() && !player->isInFlight())
+            PlayerCreatureRelocationWorker(player, &i_creature);
+    }
+}
+
+template<>
+inline void Trinity::CreatureRelocationNotifier::Visit(CreatureMapType &m)
+{
+    if (!i_creature.isAlive())
+        return;
+
+    for(CreatureMapType::iterator iter = m.begin(); iter != m.end(); ++iter)
+    {
+        Creature* c = iter->getSource();
+        if (c != &i_creature && c->isAlive())
+            CreatureCreatureRelocationWorker(c, &i_creature);
+    }
 }
 
 // SEARCHERS & LIST SEARCHERS & WORKERS

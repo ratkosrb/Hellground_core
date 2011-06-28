@@ -255,7 +255,7 @@ const int32 Player::ReputationRank_Length[MAX_REPUTATION_RANK] = {36000, 3000, 3
 
 UpdateMask Player::updateVisualBits;
 
-Player::Player (WorldSession *session): Unit()
+Player::Player (WorldSession *session): Unit(), m_mover(this), m_camera(this)
 {
     m_transport = 0;
 
@@ -2304,6 +2304,7 @@ void Player::SetGameMaster(bool on)
         getHostilRefManager().setOnlineOfflineState(true);
     }
 
+    m_camera.UpdateVisibilityForOwner();
     UpdateObjectVisibility();
 }
 
@@ -2332,7 +2333,7 @@ void Player::SetGMVisible(bool on)
     }
 }
 
-bool Player::IsGroupVisiblefor (Player* p) const
+bool Player::IsGroupVisibleFor(Player* p) const
 {
     switch (sWorld.getConfig(CONFIG_GROUP_VISIBILITY))
     {
@@ -4118,7 +4119,9 @@ void Player::ResurrectPlayer(float restore_percent, bool applySickness)
         SetPower(POWER_ENERGY, uint32(GetMaxPower(POWER_ENERGY)*restore_percent));
     }
 
-    // update visibility
+    // update visibility of world around viewpoint
+    m_camera.UpdateVisibilityForOwner();
+    // update visibility of player for nearby cameras
     UpdateObjectVisibility();
 
     // some items limited to specific map
@@ -5604,11 +5607,7 @@ void Player::SaveRecallPosition()
 
 void Player::SendMessageToSet(WorldPacket *data, bool self, bool to_possessor)
 {
-    // Arena Preparation hack
-    if (InArena() && GetBattleGround()->GetStatus() != STATUS_IN_PROGRESS)
-        GetMap()->MessageDistBroadcast(this, data, 10.0, self, to_possessor);
-    else
-        GetMap()->MessageBroadcast(this, data, self, to_possessor);
+    GetMap()->MessageBroadcast(this, data, self, to_possessor);
 }
 
 void Player::SendMessageToSetInRange(WorldPacket *data, float dist, bool self, bool to_possessor)
@@ -14825,7 +14824,7 @@ bool Player::LoadFromDB(uint32 guid, SqlQueryHolder *holder)
     SetCreatorGUID(NULL);
 
     // reset some aura modifiers before aura apply
-    SetFarSight(NULL);
+    SetUInt64Value(PLAYER_FARSIGHT, 0);
     SetUInt32Value(PLAYER_TRACK_CREATURES, 0);
     SetUInt32Value(PLAYER_TRACK_RESOURCES, 0);
 
@@ -17551,24 +17550,29 @@ void Player::HandleStealthedUnitsDetection()
 
     Cell::VisitAllObjects(this, searcher, MAX_PLAYER_STEALTH_DETECT_RANGE);
 
+    WorldObject const* viewPoint = GetCamera().GetBody();
+
+    for (std::list<Unit*>::const_iterator i = stealthedUnits.begin(); i != stealthedUnits.end(); ++i)
     for (std::list<Unit*>::const_iterator i = stealthedUnits.begin(); i != stealthedUnits.end(); ++i)
     {
         if ((*i) == this)
             continue;
 
         bool hasAtClient = HaveAtClient((*i));
-        bool hasDetected = canSeeOrDetect(*i, true);
+        bool hasDetected = (*i)->isVisibleForOrDetect(this, viewPoint, true);
 
         if (hasDetected)
         {
             if (!hasAtClient)
             {
+                uint64 i_guid = (*i)->GetGUID();
                 (*i)->SendCreateUpdateToPlayer(this);
-                m_clientGUIDs.insert((*i)->GetGUID());
+                m_clientGUIDs.insert(i_guid);
 
                 // target aura duration for caster show only if target exist at caster client
                 // send data at target visibility change (adding to client)
-                SendInitialVisiblePackets(*i);
+                if ((*i) != this && (*i)->isType(TYPEMASK_UNIT))
+                    SendInitialVisiblePackets(*i);
             }
         }
         else
@@ -18392,124 +18396,6 @@ void Player::ReportedAfkBy(Player* reporter)
     }
 }
 
-bool Player::canSeeOrDetect(Unit const* u, bool detect, bool inVisibleList, bool is3dDistance) const
-{
-    // Always can see self
-    if (u == this)
-        return true;
-
-    // player visible for other player if not logout and at same transport
-    // including case when player is out of world
-    bool at_same_transport =
-        GetTransport() && u->GetTypeId() == TYPEID_PLAYER
-        && !GetSession()->PlayerLogout() && !((Player*)u)->GetSession()->PlayerLogout()
-        && !GetSession()->PlayerLoading() && !((Player*)u)->GetSession()->PlayerLoading()
-        && GetTransport() == ((Player*)u)->GetTransport();
-
-    // not in world
-    if (!at_same_transport && (!IsInWorld() || !u->IsInWorld()))
-        return false;
-
-    // forbidden to seen (at GM respawn command)
-    if (u->GetVisibility() == VISIBILITY_RESPAWN)
-        return false;
-
-    // always seen by owner
-    if (GetGUID() == u->GetCharmerOrOwnerGUID())
-        return true;
-
-    Map& _map = *u->GetMap();
-    // Grid dead/alive checks
-    // non visible at grid for any stealth state
-    if (!u->IsVisibleInGridForPlayer(this))
-        return false;
-
-    // If the player is currently channeling vision, update visibility from the target unit's location
-    const WorldObject* viewPoint = GetFarsightTarget();
-    if (!viewPoint || !HasFarsightVision()) viewPoint = u;
-
-    // different visible distance checks
-    if (isInFlight())                                     // what see player in flight
-    {
-        if (!viewPoint->IsWithinDistInMap(u, _map.GetVisibilityDistance() + (inVisibleList ? World::GetVisibleObjectGreyDistance() : 0.0f), is3dDistance))
-            return false;
-    }
-    else if (!u->isAlive())                                     // distance for show body
-    {
-        if (!viewPoint->IsWithinDistInMap(u, _map.GetVisibilityDistance() + (inVisibleList ? World::GetVisibleObjectGreyDistance() : 0.0f), is3dDistance))
-            return false;
-    }
-    else if (u->GetTypeId()==TYPEID_PLAYER)                     // distance for show player
-    {
-        // Players far than max visible distance for player or not in our map are not visible too
-        if (!at_same_transport && !viewPoint->IsWithinDistInMap(u, _map.GetVisibilityDistance() + (inVisibleList ? World::GetVisibleUnitGreyDistance() : 0.0f), is3dDistance))
-            return false;
-    }
-    else if (u->GetCharmerOrOwnerGUID())                        // distance for show pet/charmed
-    {
-        // Pet/charmed far than max visible distance for player or not in our map are not visible too
-        if (!viewPoint->IsWithinDistInMap(u, _map.GetVisibilityDistance() + (inVisibleList ? World::GetVisibleUnitGreyDistance() : 0.0f), is3dDistance))
-            return false;
-    }
-    else                                                    // distance for show creature
-    {
-        // Units far than max visible distance for creature or not in our map are not visible too
-        if (!viewPoint->IsWithinDistInMap(u, u->isActiveObject() ? (MAX_VISIBILITY_DISTANCE - (inVisibleList ? 0.0f : World::GetVisibleUnitGreyDistance()))
-            : (_map.GetVisibilityDistance() + (inVisibleList ? World::GetVisibleUnitGreyDistance() : 0.0f))
-            , is3dDistance))
-            return false;
-    }
-
-    if (u->GetVisibility() == VISIBILITY_OFF)
-    {
-        // GMs see any players, not higher GMs and all units
-        if (isGameMaster())
-        {
-            if (u->GetTypeId() == TYPEID_PLAYER)
-                return ((Player *)u)->GetSession()->GetSecurity() <= GetSession()->GetSecurity();
-            else
-                return true;
-        }
-        return false;
-    }
-
-    // GM's can see everyone with invisibilitymask with less or equal security level
-    if (m_invisibilityMask || u->m_invisibilityMask)
-    {
-        if (isGameMaster())
-        {
-            if (u->GetTypeId() == TYPEID_PLAYER)
-                return ((Player*)u)->GetSession()->GetSecurity() <= GetSession()->GetSecurity();
-            else
-                return true;
-        }
-
-        // player see other player with stealth/invisibility only if he in same group or raid or same team (raid/team case dependent from conf setting)
-        if (!canDetectInvisibilityOf(u))
-            if (!(u->GetTypeId()==TYPEID_PLAYER && !IsHostileTo(u) && IsGroupVisiblefor (((Player*)u))))
-                return false;
-    }
-
-    // GM invisibility checks early, invisibility if any detectable, so if not stealth then visible
-    if (u->GetVisibility() == VISIBILITY_GROUP_STEALTH && !isGameMaster())
-    {
-        // if player is dead then he can't detect anyone in any cases
-        //do not know what is the use of this detect
-        // stealth and detected and visible for some seconds
-        if (!isAlive())
-            detect = false;
-        if (m_DetectInvTimer < 300 || !HaveAtClient(u))
-            if (!(u->GetTypeId()==TYPEID_PLAYER && !IsHostileTo(u) && IsGroupVisiblefor (((Player*)u))))
-                if (!detect || !canDetectStealthOf(u, GetDistance(u)))
-                    return false;
-    }
-
-    // If use this server will be too laggy
-    // Now check is target visible with LoS
-    //return u->IsWithinLOS(GetPositionX(),GetPositionY(),GetPositionZ());
-    return true;
-}
-
 bool Player::IsVisibleInGridForPlayer(Player const * pl) const
 {
     // gamemaster in GM mode see all, including ghosts
@@ -18576,63 +18462,41 @@ bool Player::IsVisibleGloballyfor (Player* u) const
 }
 
 template<class T>
-inline void UpdateVisibilityOf_helper(std::set<uint64>& s64, T* target, std::set<Unit*>& v)
+inline void BeforeVisibilityDestroy(T* /*t*/, Player* /*p*/)
 {
-    s64.insert(target->GetGUID());
 }
 
 template<>
-inline void UpdateVisibilityOf_helper(std::set<uint64>& s64, GameObject* target, std::set<Unit*>& v)
+inline void BeforeVisibilityDestroy<Creature>(Creature* t, Player* p)
 {
-    if(!target->IsTransport())
-        s64.insert(target->GetGUID());
+    if (p->GetPetGUID()==t->GetGUID() && ((Creature*)t)->isPet())
+        ((Pet*)t)->Remove(PET_SAVE_NOT_IN_SLOT, true);
 }
 
-template<>
-inline void UpdateVisibilityOf_helper(std::set<uint64>& s64, Creature* target, std::set<Unit*>& v)
-{
-    s64.insert(target->GetGUID());
-    v.insert(target);
-}
-
-template<>
-inline void UpdateVisibilityOf_helper(std::set<uint64>& s64, Player* target, std::set<Unit*>& v)
-{
-    s64.insert(target->GetGUID());
-    v.insert(target);
-}
-
-void Player::UpdateVisibilityOf(WorldObject* target)
+void Player::UpdateVisibilityOf(WorldObject const* viewPoint, WorldObject* target)
 {
     if (HaveAtClient(target))
     {
-        if (!target->isVisibleForInState(this, true))
+        if (!target->isVisibleForInState(this, viewPoint, true))
         {
+            if (target->GetTypeId()==TYPEID_UNIT)
+                BeforeVisibilityDestroy<Creature>((Creature*)target, this);
+
             target->DestroyForPlayer(this);
             m_clientGUIDs.erase(target->GetGUID());
-
-            #ifdef TRINITY_DEBUG
-            if ((sLog.getLogFilter() & LOG_FILTER_VISIBILITY_CHANGES)==0)
-                sLog.outDebug("Object %u (Type: %u) out of range for player %u. Distance = %f",target->GetGUIDLow(),target->GetTypeId(),GetGUIDLow(),GetDistance(target));
-            #endif
         }
     }
     else
     {
-        if (target->isVisibleForInState(this, false))
+        if (target->isVisibleForInState(this, viewPoint, false))
         {
             target->SendCreateUpdateToPlayer(this);
-            if (target->GetTypeId()!=TYPEID_GAMEOBJECT||!((GameObject*)target)->IsTransport())
+            if (target->GetTypeId() != TYPEID_GAMEOBJECT || !((GameObject*)target)->IsTransport())
                 m_clientGUIDs.insert(target->GetGUID());
-
-            #ifdef TRINITY_DEBUG
-            if ((sLog.getLogFilter() & LOG_FILTER_VISIBILITY_CHANGES)==0)
-                sLog.outDebug("Object %u (Type: %u) is visible now for player %u. Distance = %f",target->GetGUIDLow(),target->GetTypeId(),GetGUIDLow(),GetDistance(target));
-            #endif
 
             // target aura duration for caster show only if target exist at caster client
             // send data at target visibility change (adding to client)
-            if (target->isType(TYPEMASK_UNIT))
+            if (target != this && target->isType(TYPEMASK_UNIT))
                 SendInitialVisiblePackets((Unit*)target);
         }
     }
@@ -18676,66 +18540,47 @@ void Player::SendInitialVisiblePackets(Unit* target)
 }
 
 template<class T>
-void Player::UpdateVisibilityOf(T* target, UpdateData& data, std::set<Unit*>& visibleNow)
+inline void UpdateVisibilityOf_helper(std::set<uint64>& s64, T* target)
 {
-    if (!target)
-        return;
+    s64.insert(target->GetGUID());
+}
 
+template<>
+inline void UpdateVisibilityOf_helper(std::set<uint64>& s64, GameObject* target)
+{
+    if(!target->IsTransport())
+        s64.insert(target->GetGUID());
+}
+
+template<class T>
+void Player::UpdateVisibilityOf(WorldObject const* viewPoint, T* target, UpdateData& data, std::set<WorldObject*>& visibleNow)
+{
     if (HaveAtClient(target))
     {
-        if (!target->isVisibleForInState(this, true))
+        if (!target->isVisibleForInState(this, viewPoint, true))
         {
+            BeforeVisibilityDestroy<T>(target, this);
+
             target->BuildOutOfRangeUpdateBlock(&data);
             m_clientGUIDs.erase(target->GetGUID());
-
-            #ifdef TRINITY_DEBUG
-            if ((sLog.getLogFilter() & LOG_FILTER_VISIBILITY_CHANGES)==0)
-                sLog.outDebug("Object %u (Type: %u, Entry: %u) is out of range for player %u. Distance = %f",target->GetGUIDLow(),target->GetTypeId(),target->GetEntry(),GetGUIDLow(),GetDistance(target));
-            #endif
         }
     }
-    else if (visibleNow.size() < 30)
-    {
-        if (target->isVisibleForInState(this, false))
-        {
-            target->BuildCreateUpdateBlockForPlayer(&data, this);
-            UpdateVisibilityOf_helper(m_clientGUIDs,target,visibleNow);
-
-            #ifdef TRINITY_DEBUG
-            if ((sLog.getLogFilter() & LOG_FILTER_VISIBILITY_CHANGES)==0)
-                sLog.outDebug("Object %u (Type: %u, Entry: %u) is visible now for player %u. Distance = %f",target->GetGUIDLow(),target->GetTypeId(),target->GetEntry(),GetGUIDLow(),GetDistance(target));
-            #endif
-        }
-    }
-}
-
-template void Player::UpdateVisibilityOf(Player*        target, UpdateData& data, std::set<Unit*>& visibleNow);
-template void Player::UpdateVisibilityOf(Creature*      target, UpdateData& data, std::set<Unit*>& visibleNow);
-template void Player::UpdateVisibilityOf(Corpse*        target, UpdateData& data, std::set<Unit*>& visibleNow);
-template void Player::UpdateVisibilityOf(GameObject*    target, UpdateData& data, std::set<Unit*>& visibleNow);
-template void Player::UpdateVisibilityOf(DynamicObject* target, UpdateData& data, std::set<Unit*>& visibleNow);
-
-void Player::UpdateObjectVisibility(bool forced)
-{
-    if (!forced)
-        AddToNotify(NOTIFY_VISIBILITY_CHANGED);
     else
     {
-        Unit::UpdateObjectVisibility(true);
-        UpdateVisibilityForPlayer();
+        if (target->isVisibleForInState(this, viewPoint, false))
+        {
+            visibleNow.insert(target);
+            target->BuildCreateUpdateBlockForPlayer(&data, this);
+            UpdateVisibilityOf_helper(m_clientGUIDs,target);
+        }
     }
 }
 
-void Player::UpdateVisibilityForPlayer()
-{
-    WorldObject const *viewPoint = GetFarsightTarget();
-    if (!viewPoint || !HasFarsightVision()) viewPoint = this;
-
-    // updates visibility of all objects around point of view for current player
-    Trinity::VisibleNotifier notifier(*this);
-    Cell::VisitAllObjects(viewPoint, notifier, GetMap()->GetVisibilityDistance());
-    notifier.SendToSelf();   // send gathered data
-}
+template void Player::UpdateVisibilityOf(WorldObject const* viewPoint, Player*        target, UpdateData& data, std::set<WorldObject*>& visibleNow);
+template void Player::UpdateVisibilityOf(WorldObject const* viewPoint, Creature*      target, UpdateData& data, std::set<WorldObject*>& visibleNow);
+template void Player::UpdateVisibilityOf(WorldObject const* viewPoint, Corpse*        target, UpdateData& data, std::set<WorldObject*>& visibleNow);
+template void Player::UpdateVisibilityOf(WorldObject const* viewPoint, GameObject*    target, UpdateData& data, std::set<WorldObject*>& visibleNow);
+template void Player::UpdateVisibilityOf(WorldObject const* viewPoint, DynamicObject* target, UpdateData& data, std::set<WorldObject*>& visibleNow);
 
 void Player::InitPrimaryProffesions()
 {
@@ -18866,6 +18711,8 @@ void Player::SendInitialPacketsBeforeAddToMap()
     // set fly flag if in fly form or taxi flight to prevent visually drop at ground in showup moment
     if (HasAuraType(SPELL_AURA_MOD_INCREASE_FLIGHT_SPEED) || isInFlight())
         AddUnitMovementFlag(SPLINEFLAG_FLYINGING2);
+
+    SetMover(this);
 }
 
 void Player::SendInitialPacketsAfterAddToMap()

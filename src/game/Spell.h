@@ -707,6 +707,7 @@ namespace Trinity
         template<> inline void Visit(PlayerMapType &) {}
         template<> inline void Visit(GameObjectMapType &) {}
         template<> inline void Visit(DynamicObjectMapType &) {}
+        template<> inline void Visit(CameraMapType & ) {}
         #endif
     };
 
@@ -820,6 +821,7 @@ namespace Trinity
         template<> inline void Visit(CorpseMapType &) {}
         template<> inline void Visit(GameObjectMapType &) {}
         template<> inline void Visit(DynamicObjectMapType &) {}
+        template<> inline void Visit(CameraMapType & ) {}
         #endif
     };
 
@@ -932,6 +934,7 @@ namespace Trinity
         template<> inline void Visit(GameObjectMapType &) {}
         template<> inline void Visit(PlayerMapType &) {}
         template<> inline void Visit(DynamicObjectMapType &) {}
+        template<> inline void Visit(CameraMapType & ) {}
         #endif
     };
 
@@ -944,6 +947,7 @@ namespace Trinity
     template<> inline void SpellNotifierCreatureAndPlayer::Visit(CorpseMapType&) {}
     template<> inline void SpellNotifierCreatureAndPlayer::Visit(GameObjectMapType&) {}
     template<> inline void SpellNotifierCreatureAndPlayer::Visit(DynamicObjectMapType&) {}
+    template<> inline void SpellNotifierCreatureAndPlayer::Visit(CameraMapType& ) {}
 
     template<> inline void SpellNotifierDeadCreature::Visit(CorpseMapType&) {}
     template<> inline void SpellNotifierDeadCreature::Visit(GameObjectMapType&) {}

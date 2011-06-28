@@ -609,7 +609,7 @@ class TRINITY_DLL_SPEC GameObject : public WorldObject
 
         void TriggeringLinkedGameObject(uint32 trapEntry, Unit* target);
 
-        bool isVisibleForInState(Player const* u, bool inVisibleList) const;
+        bool isVisibleForInState(Player const* u, WorldObject const* viewPoint, bool inVisibleList) const;
         bool canDetectTrap(Player const* u, float distance) const;
 
         GameObject* LookupFishingHoleAround(float range);

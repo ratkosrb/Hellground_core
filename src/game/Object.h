@@ -25,10 +25,10 @@
 #include "ByteBuffer.h"
 #include "UpdateFields.h"
 #include "UpdateData.h"
-#include "GameSystem/GridReference.h"
 #include "ObjectGuid.h"
 #include "GridDefines.h"
 #include "Map.h"
+#include "Camera.h"
 
 #include <set>
 #include <string>
@@ -314,6 +314,7 @@ class TRINITY_DLL_SPEC Object
         virtual void _SetCreateBits(UpdateMask *updateMask, Player *target) const;
         void BuildMovementUpdate(ByteBuffer * data, uint8 updateFlags) const;
         void BuildValuesUpdate(uint8 updatetype, ByteBuffer *data, UpdateMask *updateMask, Player *target) const;
+        void BuildUpdateDataForPlayer(Player* pl, UpdateDataMapType& update_players);
 
         uint16 m_objectType;
 
@@ -529,8 +530,11 @@ class TRINITY_DLL_SPEC WorldObject : public Object, public WorldLocation
         float GetAngle(const float x, const float y) const;
         bool HasInArc(const float arcangle, const WorldObject* obj) const;
 
+        bool isInFrontInMap(WorldObject const* target,float distance, float arc = M_PI) const;
+
         virtual void SendMessageToSet(WorldPacket *data, bool self, bool to_possessor = true);
         virtual void SendMessageToSetInRange(WorldPacket *data, float dist, bool self, bool to_possessor = true);
+        void SendMessageToSetExcept(WorldPacket *data, Player const* skipped_receiver);
 
         bool IsBeingTeleported() { return mSemaphoreTeleport; }
         void SetSemaphoreTeleport(bool semphsetting) { mSemaphoreTeleport = semphsetting; }
@@ -553,23 +557,14 @@ class TRINITY_DLL_SPEC WorldObject : public Object, public WorldLocation
         virtual void SaveRespawnTime() {}
 
         void AddObjectToRemoveList();
-        virtual void UpdateObjectVisibility(bool forced = true);
+        void UpdateObjectVisibility();
         void BuildUpdate(UpdateDataMapType&);
 
-        //new relocation and visibility system functions
-        void AddToNotify(uint16 f) { m_notifyflags |= f;}
-        bool isNeedNotify(uint16 f) const { return m_notifyflags & f;}
-
-        uint16 GetNotifyFlags() const { return m_notifyflags; }
-        bool NotifyExecuted(uint16 f) const { return m_executed_notifies & f;}
-        void SetNotified(uint16 f) { m_executed_notifies |= f;}
-        void ResetAllNotifies() { m_notifyflags = 0; m_executed_notifies = 0; }
-
         // main visibility check function in normal case (ignore grey zone distance check)
-        bool isVisiblefor (Player const* u) const { return isVisibleForInState(u,false); }
+        bool isVisibleFor(Player const* u, WorldObject const* viewPoint) const { return isVisibleForInState(u,viewPoint,false); }
 
         // low level function for visibility change code, must be define in all main world object subclasses
-        virtual bool isVisibleForInState(Player const* u, bool inVisibleList) const = 0;
+        virtual bool isVisibleForInState(Player const* u, WorldObject const* viewPoint, bool inVisibleList) const = 0;
 
         // Low Level Packets
         void SendPlaySound(uint32 Sound, bool OnlySelf);
@@ -597,6 +592,8 @@ class TRINITY_DLL_SPEC WorldObject : public Object, public WorldLocation
         uint32 m_groupLootTimer;                            // (msecs)timer used for group loot
         uint64 lootingGroupLeaderGUID;                      // used to find group which is looting corpse
 
+        ViewPoint& GetViewPoint() { return m_viewPoint; }
+
     protected:
         explicit WorldObject();
         std::string m_name;
@@ -617,8 +614,7 @@ class TRINITY_DLL_SPEC WorldObject : public Object, public WorldLocation
         float m_positionZ;
         float m_orientation;
 
-        uint16 m_notifyflags;
-        uint16 m_executed_notifies;
+        ViewPoint m_viewPoint;
 
         bool mSemaphoreTeleport;
         WorldUpdateCounter m_updateTracker; 

@@ -1031,12 +1031,26 @@ bool Object::PrintIndexError(uint32 index, bool set) const
     return false;
 }
 
+void Object::BuildUpdateDataForPlayer(Player* pl, UpdateDataMapType& update_players)
+{
+    UpdateDataMapType::iterator iter = update_players.find(pl);
+
+    if (iter == update_players.end())
+    {
+        std::pair<UpdateDataMapType::iterator, bool> p = update_players.insert( UpdateDataMapType::value_type(pl, UpdateData()) );
+        ASSERT(p.second);
+        iter = p.first;
+    }
+
+    BuildValuesUpdateBlockForPlayer(&iter->second, iter->first);
+}
+
 WorldObject::WorldObject()
     : m_mapId(0), m_InstanceId(0),
     m_positionX(0.0f), m_positionY(0.0f), m_positionZ(0.0f), m_orientation(0.0f)
     , m_map(NULL), m_zoneScript(NULL)
     , m_isActive(false), IsTempWorldObject(false)
-    , m_name(""), m_notifyflags(0), m_executed_notifies(0)
+    , m_name("")
 {
 
     m_groupLootTimer    = 0;
@@ -1344,6 +1358,11 @@ bool WorldObject::HasInArc(const float arcangle, const WorldObject* obj) const
     float lborder =  -1 * (arc/2.0f);                       // in range -pi..0
     float rborder = (arc/2.0f);                             // in range 0..pi
     return ((angle >= lborder) && (angle <= rborder));
+}
+
+bool WorldObject::isInFrontInMap(WorldObject const* target, float distance,  float arc) const
+{
+    return IsWithinDistInMap(target, distance) && HasInArc(arc, target);
 }
 
 void WorldObject::GetRandomPoint(float x, float y, float z, float distance, float &rand_x, float &rand_y, float &rand_z) const
@@ -1655,7 +1674,11 @@ void WorldObject::SendMessageToSetInRange(WorldPacket *data, float dist, bool /*
 {
     GetMap()->MessageDistBroadcast(this, data, dist, bToPossessor);
 }
-
+void WorldObject::SendMessageToSetExcept(WorldPacket *data, Player const* skipped_receiver)
+{
+    Trinity::MessageDelivererExcept notifier(data, skipped_receiver);
+    Cell::VisitWorldObjects(this, notifier, GetMap()->GetVisibilityDistance());
+}
 void WorldObject::SendObjectDeSpawnAnim(uint64 guid)
 {
     WorldPacket data(SMSG_GAMEOBJECT_DESPAWN_ANIM, 8);
@@ -2144,11 +2167,12 @@ void WorldObject::GetGroundPoint(float &x, float &y, float &z, float dist, float
     UpdateGroundPositionZ(x, y, z);
 }
 
-void WorldObject::UpdateObjectVisibility(bool /*forced*/)
+void WorldObject::UpdateObjectVisibility()
 {
-    //updates object's visibility for nearby players
-    Trinity::VisibleChangesNotifier notifier(*this);
-    Cell::VisitWorldObjects(this, notifier, GetMap()->GetVisibilityDistance());
+    CellPair p = Trinity::ComputeCellPair(GetPositionX(), GetPositionY());
+    Cell cell(p);
+
+    GetMap()->UpdateObjectVisibility(this, cell, p);
 }
 
 void WorldObject::AddToClientUpdateList()
@@ -2165,55 +2189,21 @@ struct WorldObjectChangeAccumulator
 {
     UpdateDataMapType &i_updateDatas;
     WorldObject &i_object;
-    std::set<uint64> plr_list;
-    WorldObjectChangeAccumulator(WorldObject &obj, UpdateDataMapType &d) : i_updateDatas(d), i_object(obj) {}
-    void Visit(PlayerMapType &m)
+    WorldObjectChangeAccumulator(WorldObject &obj, UpdateDataMapType &d) : i_updateDatas(d), i_object(obj)
     {
-        for (PlayerMapType::iterator iter = m.begin(); iter != m.end(); ++iter)
-        {
-            BuildPacket(iter->getSource());
-            if (!iter->getSource()->GetSharedVisionList().empty())
-            {
-                SharedVisionList::const_iterator it = iter->getSource()->GetSharedVisionList().begin();
-                for (; it != iter->getSource()->GetSharedVisionList().end(); ++it)
-                    BuildPacket(*it);
-            }
-        }
+        // send self fields changes in another way, otherwise
+        // with new camera system when player's camera too far from player, camera wouldn't receive packets and changes from player
+        if(i_object.isType(TYPEMASK_PLAYER))
+            i_object.BuildUpdateDataForPlayer((Player*)&i_object, i_updateDatas);
     }
 
-    void Visit(CreatureMapType &m)
+    void Visit(CameraMapType &m)
     {
-        for (CreatureMapType::iterator iter = m.begin(); iter != m.end(); ++iter)
+        for(CameraMapType::iterator iter = m.begin(); iter != m.end(); ++iter)
         {
-            if (!iter->getSource()->GetSharedVisionList().empty())
-            {
-                SharedVisionList::const_iterator it = iter->getSource()->GetSharedVisionList().begin();
-                for (; it != iter->getSource()->GetSharedVisionList().end(); ++it)
-                    BuildPacket(*it);
-            }
-        }
-    }
-    void Visit(DynamicObjectMapType &m)
-    {
-        for (DynamicObjectMapType::iterator iter = m.begin(); iter != m.end(); ++iter)
-        {
-            uint64 guid = iter->getSource()->GetCasterGUID();
-            if (IS_PLAYER_GUID(guid))
-            {
-                //Caster may be NULL if DynObj is in removelist
-                if (Player *caster = ObjectAccessor::FindPlayer(guid))
-                    if (caster->GetUInt64Value(PLAYER_FARSIGHT) == iter->getSource()->GetGUID())
-                        BuildPacket(caster);
-            }
-        }
-    }
-    void BuildPacket(Player* plr)
-    {
-        // Only send update once to a player
-        if (plr_list.find(plr->GetGUID()) == plr_list.end() && plr->HaveAtClient(&i_object))
-        {
-            i_object.BuildFieldsUpdate(plr, i_updateDatas);
-            plr_list.insert(plr->GetGUID());
+            Player* owner = iter->getSource()->GetOwner();
+            if(owner != &i_object && owner->HaveAtClient(&i_object))
+                i_object.BuildUpdateDataForPlayer(owner, i_updateDatas);
         }
     }
 

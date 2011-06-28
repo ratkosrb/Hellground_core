@@ -269,6 +269,8 @@ Unit::Unit()
     m_AurasUpdateIterator = m_Auras.end();
     m_Visibility = VISIBILITY_ON;
 
+    m_AINotifyScheduled = false;
+
     m_interruptMask = 0;
     m_detectInvisibilityMask = 0;
     m_invisibilityMask = 0;
@@ -5917,8 +5919,9 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAu
                     if (triggeredByAura && castItem->GetGUID() != triggeredByAura->GetCastItemGUID())
                         return false;
 
+                    const static uint32 WF_RANK_1 = 33757;
                     // custom cooldown processing case
-                    if (cooldown && ((Player*)this)->HasSpellCooldown(dummySpell->Id))
+                    if (cooldown && ((Player*)this)->HasSpellCooldown(WF_RANK_1))
                         return false;
 
                     uint32 spellId;
@@ -5963,7 +5966,7 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAu
 
                     // apply cooldown before cast to prevent processing itself
                     if (cooldown)
-                        ((Player*)this)->AddSpellCooldown(dummySpell->Id,0,time(NULL) + cooldown);
+                        ((Player*)this)->AddSpellCooldown(WF_RANK_1, 0 , time(NULL) + cooldown);
 
                     // Attack Twice
                     for (uint32 i = 0; i<2; ++i)
@@ -9296,7 +9299,7 @@ int32 Unit::ModifyPower(Powers power, int32 dVal)
     return gain;
 }
 
-bool Unit::isVisibleForOrDetect(Unit const* u, bool detect, bool inVisibleList, bool is3dDistance) const
+bool Unit::isVisibleForOrDetect(Unit const* u, WorldObject const* viewPoint, bool detect, bool inVisibleList, bool is3dDistance) const
 {
     if (!u || !IsInMap(u))
         return false;
@@ -9309,10 +9312,231 @@ bool Unit::isVisibleForOrDetect(Unit const* u, bool detect, bool inVisibleList, 
             return false;
     }
 
-    return u->canSeeOrDetect(this, detect, inVisibleList, is3dDistance);
+    // player visible for other player if not logout and at same transport
+    // including case when player is out of world
+    bool at_same_transport = GetTypeId() == TYPEID_PLAYER &&  u->GetTypeId()==TYPEID_PLAYER &&
+        !((Player*)this)->GetSession()->PlayerLogout() && !((Player*)u)->GetSession()->PlayerLogout() &&
+        !((Player*)this)->GetSession()->PlayerLoading() && !((Player*)u)->GetSession()->PlayerLoading() &&
+        ((Player*)this)->GetTransport() && ((Player*)this)->GetTransport() == ((Player*)u)->GetTransport();
+
+    // not in world
+    if(!at_same_transport && (!IsInWorld() || !u->IsInWorld()))
+        return false;
+
+    // forbidden to seen (at GM respawn command)
+    if (m_Visibility == VISIBILITY_RESPAWN)
+        return false;
+
+    Map& _map = *u->GetMap();
+    // Grid dead/alive checks
+    if (u->GetTypeId()==TYPEID_PLAYER)
+    {
+        // non visible at grid for any stealth state
+        if (!IsVisibleInGridForPlayer((Player *)u))
+            return false;
+
+        // if player is dead then he can't detect anyone in any cases
+        if (!u->isAlive())
+            detect = false;
+    }
+    else
+    {
+        // all dead creatures/players not visible for any creatures
+        if (!u->isAlive() || !isAlive())
+            return false;
+    }
+
+    // different visible distance checks
+    if (u->isInFlight())                                    // what see player in flight
+    {
+        // use object grey distance for all (only see objects any way)
+        if (!IsWithinDistInMap(viewPoint, World::GetMaxVisibleDistanceInFlight()+(inVisibleList ? World::GetVisibleObjectGreyDistance() : 0.0f), is3dDistance))
+            return false;
+    }
+    else if (!isAlive())                                     // distance for show body
+    {
+        if (!IsWithinDistInMap(viewPoint, World::GetMaxVisibleDistanceForObject()+(inVisibleList ? World::GetVisibleObjectGreyDistance() : 0.0f), is3dDistance))
+            return false;
+    }
+    else if (GetTypeId() == TYPEID_PLAYER)                     // distance for show player
+    {
+        if (u->GetTypeId() == TYPEID_PLAYER)
+        {
+            // Players far than max visible distance for player or not in our map are not visible too
+            if (!at_same_transport && !IsWithinDistInMap(viewPoint, _map.GetVisibilityDistance() + (inVisibleList ? World::GetVisibleUnitGreyDistance() : 0.0f), is3dDistance))
+                return false;
+        }
+        else
+        {
+            // Units far than max visible distance for creature or not in our map are not visible too
+            if (!IsWithinDistInMap(viewPoint, _map.GetVisibilityDistance() + (inVisibleList ? World::GetVisibleUnitGreyDistance() : 0.0f), is3dDistance))
+                return false;
+        }
+    }
+    else if (GetCharmerOrOwnerGUID())                        // distance for show pet/charmed
+    {
+        // Pet/charmed far than max visible distance for player or not in our map are not visible too
+        if (!IsWithinDistInMap(viewPoint, _map.GetVisibilityDistance() + (inVisibleList ? World::GetVisibleUnitGreyDistance() : 0.0f), is3dDistance))
+            return false;
+    }
+    else                                                    // distance for show creature
+    {
+        // Units far than max visible distance for creature or not in our map are not visible too
+        if (!IsWithinDistInMap(viewPoint, _map.GetVisibilityDistance() + (inVisibleList ? World::GetVisibleUnitGreyDistance() : 0.0f), is3dDistance))
+            return false;
+    }
+
+    // always seen by owner
+    if (GetCharmerOrOwnerGUID() == u->GetGUID())
+        return true;
+
+    /*
+    // isInvisibleForAlive() those units can only be seen by dead or if other
+    // unit is also invisible for alive.. if an isinvisibleforalive unit dies we
+    // should be able to see it too
+    if (u->isAlive() && isAlive() && isInvisibleForAlive() != u->isInvisibleForAlive())
+        if (u->GetTypeId() != TYPEID_PLAYER || !((Player *)u)->isGameMaster())
+            return false;
+    */
+
+    // Visible units, always are visible for all units, except for units under invisibility
+    if (m_Visibility == VISIBILITY_ON && u->m_invisibilityMask==0)
+        return true;
+
+    // GMs see any players, not higher GMs and all units
+    if (u->GetTypeId() == TYPEID_PLAYER && ((Player *)u)->isGameMaster())
+    {
+        if(GetTypeId() == TYPEID_PLAYER)
+            return ((Player *)this)->GetSession()->GetSecurity() <= ((Player *)u)->GetSession()->GetSecurity();
+        else
+            return true;
+    }
+
+    // non faction visibility non-breakable for non-GMs
+    if (m_Visibility == VISIBILITY_OFF)
+        return false;
+
+    // raw invisibility
+    bool invisible = (m_invisibilityMask != 0 || u->m_invisibilityMask !=0);
+
+    // detectable invisibility case
+    if (invisible && (
+        // Invisible units, always are visible for units under same invisibility type
+        (m_invisibilityMask & u->m_invisibilityMask)!=0 ||
+        // Invisible units, always are visible for unit that can detect this invisibility (have appropriate level for detect)
+        u->canDetectInvisibilityOf(this) ||
+        // Units that can detect invisibility always are visible for units that can be detected
+        canDetectInvisibilityOf(u) ))
+    {
+        invisible = false;
+    }
+
+    // special cases for always overwrite invisibility/stealth
+    if(invisible || m_Visibility == VISIBILITY_GROUP_STEALTH)
+    {
+        // non-hostile case
+        if (!u->IsHostileTo(this))
+        {
+            // player see other player with stealth/invisibility only if he in same group or raid or same team (raid/team case dependent from conf setting)
+            if(GetTypeId()==TYPEID_PLAYER && u->GetTypeId()==TYPEID_PLAYER)
+            {
+                if(((Player*)this)->IsGroupVisibleFor(((Player*)u)))
+                    return true;
+
+                // else apply same rules as for hostile case (detecting check for stealth)
+            }
+        }
+        // hostile case
+        else
+        {
+            // Hunter mark functionality
+            AuraList const& auras = GetAurasByType(SPELL_AURA_MOD_STALKED);
+            for (AuraList::const_iterator iter = auras.begin(); iter != auras.end(); ++iter)
+                if ((*iter)->GetCasterGUID()==u->GetGUID())
+                    return true;
+
+            // else apply detecting check for stealth
+        }
+
+        // none other cases for detect invisibility, so invisible
+        if (invisible)
+            return false;
+
+        // else apply stealth detecting check
+    }
+
+    // unit got in stealth in this moment and must ignore old detected state
+    if (m_Visibility == VISIBILITY_GROUP_NO_DETECT)
+        return false;
+
+    // GM invisibility checks early, invisibility if any detectable, so if not stealth then visible
+    if (m_Visibility != VISIBILITY_GROUP_STEALTH)
+        return true;
+
+    // NOW ONLY STEALTH CASE
+
+    //if in non-detect mode then invisible for unit
+    //mobs always detect players (detect == true)... return 'false' for those mobs which have (detect == false)
+    //players detect players only in Player::HandleStealthedUnitsDetection()
+    if (!detect)
+        return (u->GetTypeId() == TYPEID_PLAYER) ? ((Player*)u)->HaveAtClient(this) : false;
+
+    // Special cases
+
+    // If is attacked then stealth is lost, some creature can use stealth too
+    if( !getAttackers().empty() )
+        return true;
+
+    // If there is collision rogue is seen regardless of level difference
+    if (IsWithinDist(u,0.24f))
+        return true;
+
+    //If a mob or player is stunned he will not be able to detect stealth
+    if (u->hasUnitState(UNIT_STAT_STUNNED) && (u != this))
+        return false;
+
+    // set max ditance
+    float visibleDistance = (u->GetTypeId() == TYPEID_PLAYER) ? MAX_PLAYER_STEALTH_DETECT_RANGE : ((Creature const*)u)->GetAttackDistance(this);
+
+    //Always invisible from back (when stealth detection is on), also filter max distance cases
+    bool isInFront = viewPoint->isInFrontInMap(this, visibleDistance);
+    if(!isInFront)
+        return false;
+
+    // if doesn't have stealth detection (Shadow Sight), then check how stealthy the unit is, otherwise just check los
+    if (!u->HasAuraType(SPELL_AURA_DETECT_STEALTH))
+    {
+        //Calculation if target is in front
+
+        //Visible distance based on stealth value (stealth rank 4 300MOD, 10.5 - 3 = 7.5)
+        visibleDistance = 10.5f - (GetTotalAuraModifier(SPELL_AURA_MOD_STEALTH)/100.0f);
+
+        //Visible distance is modified by
+        //-Level Diff (every level diff = 1.0f in visible distance)
+        visibleDistance += int32(u->getLevelForTarget(this)) - int32(getLevelForTarget(u));
+
+        //This allows to check talent tree and will add addition stealth dependent on used points)
+        int32 stealthMod = GetTotalAuraModifier(SPELL_AURA_MOD_STEALTH_LEVEL);
+        if (stealthMod < 0)
+            stealthMod = 0;
+
+        //-Stealth Mod(positive like Master of Deception) and Stealth Detection(negative like paranoia)
+        //based on wowwiki every 5 mod we have 1 more level diff in calculation
+        visibleDistance += (int32(u->GetTotalAuraModifier(SPELL_AURA_MOD_DETECT)) - stealthMod)/5.0f;
+        visibleDistance = visibleDistance > MAX_PLAYER_STEALTH_DETECT_RANGE ? MAX_PLAYER_STEALTH_DETECT_RANGE : visibleDistance;
+
+        // recheck new distance
+        if (visibleDistance <= 0 || !IsWithinDist(viewPoint,visibleDistance))
+            return false;
+    }
+
+    // Now check is target visible with LoS
+    //float ox,oy,oz;
+    //viewPoint->GetPosition(ox,oy,oz);
+    return true;//IsWithinLOS(ox,oy,oz);
 }
 
-bool Unit::canSeeOrDetect(Unit const* u, bool detect, bool inVisibleList, bool is3dDistance) const
+bool Unit::canSeeOrDetect(Unit const* u, WorldObject const* viewPoint, bool detect, bool inVisibleList, bool is3dDistance) const
 {
     return true;
 }
@@ -9413,10 +9637,39 @@ void Unit::SetVisibility(UnitVisibility x)
 {
     m_Visibility = x;
 
-    if (x == VISIBILITY_GROUP_STEALTH)
-        DestroyForNearbyPlayers();
+    if (IsInWorld())
+    {
+        // some auras requires visible target
+        if (m_Visibility == VISIBILITY_GROUP_NO_DETECT || m_Visibility == VISIBILITY_OFF)
+        {   
+            static const AuraType auratypes[] = {SPELL_AURA_BIND_SIGHT, SPELL_AURA_FAR_SIGHT, SPELL_AURA_NONE};
+            for (AuraType const* type = &auratypes[0]; *type != SPELL_AURA_NONE; ++type)
+            {
+                AuraList& alist = m_modAuras[*type];
+                if(alist.empty())
+                    continue;
 
-    UpdateObjectVisibility();
+                for (AuraList::iterator it = alist.begin(); it != alist.end();)
+                {
+                    Aura* aura = (*it);
+                    Unit* owner = aura->GetCaster();
+                    if (!owner || !isVisibleForOrDetect(owner,this,false))
+                    {
+                        RemoveAurasDueToSpell((*it)->GetId());
+                        it = alist.begin();
+                    }
+                    else
+                        ++it;
+                }
+            }
+        }
+
+        GetViewPoint().Call_UpdateVisibilityForOwner();
+        UpdateObjectVisibility();
+        ScheduleAINotify(0);
+
+        GetViewPoint().Event_ViewPointVisibilityChanged();
+    }
 }
 
 void Unit::UpdateSpeed(UnitMoveType mtype, bool forced)
@@ -10103,9 +10356,9 @@ Creature* Unit::GetCreature(uint64 guid)
     return GetMap()->GetCreature(guid);
 }
 
-bool Unit::isVisibleForInState(Player const* u, bool inVisibleList) const
+bool Unit::isVisibleForInState(Player const* u, WorldObject const* viewPoint, bool inVisibleList) const
 {
-    return isVisibleForOrDetect(u, false, inVisibleList, false);
+    return isVisibleForOrDetect(u, viewPoint, false, inVisibleList, false);
 }
 
 uint32 Unit::GetCreatureType() const
@@ -10526,7 +10779,10 @@ uint32 Unit::GetCreatePowers(Powers power) const
 void Unit::AddToWorld()
 {
     if (!IsInWorld())
+    {
         WorldObject::AddToWorld();
+        ScheduleAINotify(0);
+    }
 }
 
 void Unit::setHover(bool val)
@@ -10549,6 +10805,7 @@ void Unit::RemoveFromWorld()
     {
         RemoveBindSightAuras();
         RemoveNotOwnSingleTargetAuras();
+        GetViewPoint().Event_RemovedFromWorld();
 
         WorldObject::RemoveFromWorld();
     }
@@ -11963,19 +12220,6 @@ bool Unit::preventApplyPersistentAA(SpellEntry const *spellInfo, uint8 eff_index
     return false;
 }
 
-void Unit::UpdateObjectVisibility(bool forced)
-{
-    if (!forced)
-        AddToNotify(NOTIFY_VISIBILITY_CHANGED);
-    else
-    {
-        WorldObject::UpdateObjectVisibility(true);
-        // call MoveInLineOfSight for nearby creatures
-        Trinity::AIRelocationNotifier notifier(*this);
-        Cell::VisitAllObjects(this, notifier, GetMap()->GetVisibilityDistance());
-    }
-}
-
 void Unit::Kill(Unit *pVictim, bool durabilityLoss)
 {
     pVictim->SetHealth(0);
@@ -12500,7 +12744,12 @@ void Unit::SetCharmedOrPossessedBy(Unit* charmer, bool possess)
     {
         addUnitState(UNIT_STAT_POSSESSED);
         SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
-        AddPlayerToVision((Player*)charmer);
+
+        Camera& camera = ((Player*)charmer)->GetCamera();
+        camera.SetView(this);
+
+        ((Player*)charmer)->SetMover(this);
+
         ((Player*)charmer)->SetViewport(GetGUID(), true);
         charmer->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
     }
@@ -12588,7 +12837,11 @@ void Unit::RemoveCharmedOrPossessedBy(Unit *charmer)
     charmer->SetCharm(0);
     if (possess)
     {
-        RemovePlayerFromVision((Player*)charmer);
+        Camera& camera = ((Player*)charmer)->GetCamera();
+        camera.ResetView();
+
+        ((Player*)charmer)->SetMover(charmer);
+
         ((Player*)charmer)->SetViewport(charmer->GetGUID(), true);
         charmer->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
     }
@@ -12891,4 +13144,63 @@ Unit* Unit::GetNextRandomRaidMember(float radius)
 
     uint32 randTarget = GetMap()->urand(0,nearMembers.size()-1);
     return nearMembers[randTarget];
+}
+
+class RelocationNotifyEvent : public BasicEvent
+{
+public:
+    RelocationNotifyEvent(Unit& owner) : BasicEvent(), m_owner(owner)
+    {
+        m_owner._SetAINotifyScheduled(true);
+    }
+
+    bool Execute(uint64 /*e_time*/, uint32 /*p_time*/)
+    {
+        float radius = m_owner.GetMap()->GetVisibilityDistance();
+        if (m_owner.GetTypeId() == TYPEID_PLAYER)
+        {
+            Trinity::PlayerRelocationNotifier notify((Player&)m_owner);
+            Cell::VisitAllObjects(&m_owner,notify,radius);
+        } 
+        else //if(m_owner.GetTypeId() == TYPEID_UNIT)
+        {
+            Trinity::CreatureRelocationNotifier notify((Creature&)m_owner);
+            Cell::VisitAllObjects(&m_owner,notify,radius);
+        }
+        m_owner._SetAINotifyScheduled(false);
+        return true;
+    }
+
+    void Abort(uint64)
+    {
+        m_owner._SetAINotifyScheduled(false);
+    }
+
+private:
+    Unit& m_owner;
+};
+
+void Unit::ScheduleAINotify(uint32 delay)
+{
+    if (!IsAINotifyScheduled())
+        m_Events.AddEvent(new RelocationNotifyEvent(*this), m_Events.CalculateTime(delay));
+}
+
+void Unit::OnRelocated()
+{
+    // switch to use G3D::Vector3 is good idea, maybe
+    float dx = m_last_notified_position.x - GetPositionX();
+    float dy = m_last_notified_position.y - GetPositionY();
+    float dz = m_last_notified_position.z - GetPositionZ();
+    float distsq = dx*dx+dy*dy+dz*dz;
+    if (distsq > World::GetRelocationLowerLimitSq())
+    {
+        m_last_notified_position.x = GetPositionX();
+        m_last_notified_position.y = GetPositionY();
+        m_last_notified_position.z = GetPositionZ();
+
+        GetViewPoint().Call_UpdateVisibilityForOwner();
+        UpdateObjectVisibility();
+    }
+    ScheduleAINotify(World::GetRelocationAINotifyDelay());
 }

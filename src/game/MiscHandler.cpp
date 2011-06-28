@@ -1403,19 +1403,15 @@ void WorldSession::HandleFarSightOpcode(WorldPacket & recv_data)
     uint8 apply;
     recv_data >> apply;
 
-    CellPair pair;
-
     switch (apply)
     {
         case 0:
-            _player->SetFarsightVision(false);
-            pair = Trinity::ComputeCellPair(_player->GetPositionX(), _player->GetPositionY());
+             _player->GetCamera().ResetView(false);
             sLog.outDebug("Player %u set vision to himself", _player->GetGUIDLow());
             break;
         case 1:
-            _player->SetFarsightVision(true);
             if (WorldObject* obj = _player->GetFarsightTarget())
-                pair = Trinity::ComputeCellPair(obj->GetPositionX(), obj->GetPositionY());
+                _player->GetCamera().SetView(obj, false);
             else
                 return;
             sLog.outDebug("Added FarSight " I64FMT " to player %u", _player->GetFarSight(), _player->GetGUIDLow());
@@ -1424,8 +1420,6 @@ void WorldSession::HandleFarSightOpcode(WorldPacket & recv_data)
             sLog.outDebug("Unhandled mode in CMSG_FAR_SIGHT: %u", apply);
             return;
     }
-
-    GetPlayer()->UpdateVisibilityForPlayer();
 }
 
 void WorldSession::HandleChooseTitleOpcode(WorldPacket & recv_data)

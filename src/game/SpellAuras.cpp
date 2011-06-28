@@ -2502,7 +2502,9 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
         if (m_target->GetTypeId() == TYPEID_PLAYER && GetSpellProto()->Effect[0]==72)
         {
             // spells with SpellEffect=72 and aura=4: 6196, 6197, 21171, 21425
-            ((Player*)m_target)->ClearFarsight();
+            ((Player*)m_target)->GetCamera().ResetView();
+            WorldPacket data(SMSG_CLEAR_FAR_SIGHT_IMMEDIATE, 0);
+            ((Player*)m_target)->GetSession()->SendPacket(&data);
             return;
         }
 
@@ -2965,18 +2967,14 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                 if (caster->GetTypeId() == TYPEID_PLAYER)
                     return;
 
+                Camera &camera = ((Player*)caster)->GetCamera();
                 if (apply)
                 {
-                    uint64 guid = caster->m_TotemSlot[3];
-                    if (guid)
-                    {
-                        Creature *totem = caster->GetMap()->GetCreature(guid);
-                        if (totem && totem->isTotem())
-                            ((Player*)caster)->CastSpell(totem, 6277, true);
-                    }
+                    Creature *pTotem = caster->GetMap()->GetCreature(caster->m_TotemSlot[3]);
+                    camera.SetView(pTotem);
                 }
                 else
-                    ((Player*)caster)->StopCastingBindSight();
+                    camera.ResetView();
                 return;
             }
             break;
@@ -3648,10 +3646,11 @@ void Aura::HandleBindSight(bool apply, bool Real)
     if (!caster || caster->GetTypeId() != TYPEID_PLAYER)
         return;
 
+    Camera& camera = ((Player*)caster)->GetCamera();
     if (apply)
-        m_target->AddPlayerToVision((Player*)caster);
+        camera.SetView(m_target);
     else
-        m_target->RemovePlayerFromVision((Player*)caster);
+        camera.ResetView();
 }
 
 void Aura::HandleFarSight(bool apply, bool Real)
@@ -3660,7 +3659,11 @@ void Aura::HandleFarSight(bool apply, bool Real)
     if (!caster || caster->GetTypeId() != TYPEID_PLAYER)
         return;
 
-    ((Player*)caster)->SetFarSight(apply ? m_target->GetGUID() : NULL);
+    Camera& camera = ((Player*)caster)->GetCamera();
+    if (apply)
+        camera.SetView(GetTarget());
+    else
+        camera.ResetView();
 }
 
 void Aura::HandleAuraTrackCreatures(bool apply, bool Real)
@@ -3706,6 +3709,12 @@ void Aura::HandleModPossess(bool apply, bool Real)
     if (!Real)
         return;
 
+    Unit *target = GetTarget();
+
+    // not possess yourself
+    if(GetCasterGUID() == target->GetGUID())
+        return;
+
     Unit* caster = GetCaster();
     if (caster && caster->GetTypeId() == TYPEID_UNIT)
     {
@@ -3715,17 +3724,17 @@ void Aura::HandleModPossess(bool apply, bool Real)
 
     if (apply)
     {
-        if (m_target->getLevel() > m_modifier.m_amount)
+        if (target->getLevel() > m_modifier.m_amount)
             return;
 
-        m_target->SetCharmedOrPossessedBy(caster, true);
+        target->SetCharmedOrPossessedBy(caster, true);
     }
     else
     {
-        if (GetId() == 40268)
-            m_target->setDeathState(JUST_DIED);
+        target->RemoveCharmedOrPossessedBy(caster);
 
-        m_target->RemoveCharmedOrPossessedBy(caster);
+        if (GetId() == 40268)
+            target->setDeathState(JUST_DIED);
     }
 }
 
@@ -3738,23 +3747,24 @@ void Aura::HandleModPossessPet(bool apply, bool Real)
     if (!caster || caster->GetTypeId() != TYPEID_PLAYER)
         return;
 
+    Pet *pet = caster->GetPet();
+    if(!pet || pet != m_target)
+        return;
+
     if (apply)
     {
-        if (caster->GetPet() != m_target)
-            return;
-
-        m_target->SetCharmedOrPossessedBy(caster, true);
+        pet->SetCharmedOrPossessedBy(caster, true);
     }
     else
     {
-        m_target->RemoveCharmedOrPossessedBy(caster);
+        pet->RemoveCharmedOrPossessedBy(caster);
 
         // Reinitialize the pet bar and make the pet come back to the owner
         ((Player*)caster)->PetSpellInitialize();
-        if (!m_target->getVictim())
+        if (!pet->getVictim())
         {
-            m_target->GetMotionMaster()->MoveFollow(caster, PET_FOLLOW_DIST, PET_FOLLOW_ANGLE);
-            m_target->GetCharmInfo()->SetCommandState(COMMAND_FOLLOW);
+            pet->GetMotionMaster()->MoveFollow(caster, PET_FOLLOW_DIST, PET_FOLLOW_ANGLE);
+            pet->GetCharmInfo()->SetCommandState(COMMAND_FOLLOW);
         }
     }
 }
@@ -3764,17 +3774,25 @@ void Aura::HandleModCharm(bool apply, bool Real)
     if (!Real)
         return;
 
+    Unit *target = GetTarget();
+
+    // not charm yourself
+    if(GetCasterGUID() == target->GetGUID())
+        return;
+
     Unit* caster = GetCaster();
+    if(!caster)
+        return;
 
     if (apply)
     {
-        if (int32(m_target->getLevel()) > m_modifier.m_amount)
+        if (int32(target->getLevel()) > m_modifier.m_amount)
             return;
 
-        m_target->SetCharmedOrPossessedBy(caster, false);
+        target->SetCharmedOrPossessedBy(caster, false);
     }
     else
-        m_target->RemoveCharmedOrPossessedBy(caster);
+        target->RemoveCharmedOrPossessedBy(caster);
 }
 
 void Aura::HandleModConfuse(bool apply, bool Real)
@@ -4070,8 +4088,7 @@ void Aura::HandleInvisibilityDetect(bool apply, bool Real)
     }
 
     if (Real && m_target->GetTypeId()==TYPEID_PLAYER)
-        //ObjectAccessor::UpdateVisibilityForPlayer((Player*)m_target);
-        m_target->UpdateObjectVisibility();
+        ((Player*)m_target)->GetCamera().UpdateVisibilityForOwner();
 }
 
 void Aura::HandleAuraModRoot(bool apply, bool Real)
@@ -4114,14 +4131,13 @@ void Aura::HandleAuraModSilence(bool apply, bool Real)
                 if (!caster)
                     return;
 
-                Aura * dummy = caster->GetDummyAura(28734);
-                if (dummy)
+                if (Aura * dummy = caster->GetDummyAura(28734))
                 {
                     int32 bp = (5 + caster->getLevel()) * dummy->GetStackAmount();
                     caster->CastCustomSpell(caster, 28733, &bp, NULL, NULL, true);
                     caster->RemoveAurasDueToSpell(28734);
                 }
-                return;
+                break;
             }
 
             // Arcane Torrent (Energy)
@@ -4132,13 +4148,13 @@ void Aura::HandleAuraModSilence(bool apply, bool Real)
                     return;
 
                 // Search Mana Tap auras on caster
-                Aura *dummy = caster->GetDummyAura(28734);
-                if (dummy)
+                if (Aura *dummy = caster->GetDummyAura(28734))
                 {
                     int32 bp = dummy->GetStackAmount() * 10;
                     caster->CastCustomSpell(caster, 25048, &bp, NULL, NULL, true);
-                    m_target->RemoveAurasDueToSpell(28734);
+                    caster->RemoveAurasDueToSpell(28734);
                 }
+                break;
             }
         }
     }
@@ -6481,10 +6497,11 @@ void Aura::HandleAuraAoeCharm(bool apply, bool Real)
 
     if (Unit* caster = GetCaster())
     {
+        Unit *target = GetTarget();
         if (apply)
-            m_target->SetCharmedOrPossessedBy(caster, false);
+            target->SetCharmedOrPossessedBy(caster, false);
         else
-            m_target->RemoveCharmedOrPossessedBy(caster);
+            target->RemoveCharmedOrPossessedBy(caster);
     }
 }
 

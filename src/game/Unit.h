@@ -491,7 +491,7 @@ enum UnitVisibility
     VISIBILITY_ON                 = 1,
     VISIBILITY_GROUP_STEALTH      = 2,                      // detect chance, seen and can see group members
     //VISIBILITY_GROUP_INVISIBILITY = 3,                      // invisibility, can see and can be seen only another invisible unit or invisible detection unit, set only if not stealthed, and in checks not used (mask used instead)
-    //VISIBILITY_GROUP_NO_DETECT    = 4,                      // state just at stealth apply for update Grid state. Don't remove, otherwise stealth spells will break
+    VISIBILITY_GROUP_NO_DETECT    = 4,                      // state just at stealth apply for update Grid state. Don't remove, otherwise stealth spells will break
     VISIBILITY_RESPAWN            = 5                       // special totally not detectable visibility for force delete object at respawn command
 };
 
@@ -1452,15 +1452,21 @@ class TRINITY_DLL_SPEC Unit : public WorldObject
         void SetVisibility(UnitVisibility x);
         void DestroyForNearbyPlayers();
 
+        void ScheduleAINotify(uint32 delay);
+        bool IsAINotifyScheduled() const { return m_AINotifyScheduled;}
+        void _SetAINotifyScheduled(bool on) { m_AINotifyScheduled = on;}       // only for call from RelocationNotifyEvent class code
+        void OnRelocated();
+
         // common function for visibility checks for player/creatures with detection code
-        virtual bool canSeeOrDetect(Unit const* u, bool detect, bool inVisibleList = false, bool is3dDistance = true) const;
-        bool isVisibleForOrDetect(Unit const* u, bool detect, bool inVisibleList = false, bool is3dDistance = true) const;
+        bool canSeeOrDetect(Unit const* u, WorldObject const* viewPoint, bool detect, bool inVisibleList = false, bool is3dDistance = true) const;
+        bool isVisibleForOrDetect(Unit const* u, WorldObject const* viewPoint, bool detect, bool inVisibleList = false, bool is3dDistance = true) const;
+
         bool canDetectInvisibilityOf(Unit const* u) const;
         bool canDetectStealthOf(Unit const* u, float distance) const;
-        void UpdateObjectVisibility(bool forced = true);
 
         // virtual functions for all world objects types
-        bool isVisibleForInState(Player const* u, bool inVisibleList) const;
+        bool isVisibleForInState(Player const* u, WorldObject const* viewPoint, bool inVisibleList) const;
+
         // function for low level grid visibility checks in player/creature cases
         virtual bool IsVisibleInGridForPlayer(Player const* pl) const = 0;
 
@@ -1732,6 +1738,8 @@ class TRINITY_DLL_SPEC Unit : public WorldObject
         uint32 m_lastManaUse;                               // msecs
 
         UnitVisibility m_Visibility;
+        Position m_last_notified_position;
+        bool m_AINotifyScheduled;
 
         Diminishing m_Diminishing;
         // Manage all Units threatening us

@@ -178,6 +178,17 @@ void WorldSession::HandleMoveTeleportAck(WorldPacket& recv_data)
 
 void WorldSession::HandleMovementOpcodes(WorldPacket & recv_data)
 {
+    uint32 opcode = recv_data.GetOpcode();
+
+    Unit *mover = _player->GetMover();
+    Player *plMover = mover->GetTypeId() == TYPEID_PLAYER ? (Player*)mover : NULL;
+
+   // ignore, waiting processing in WorldSession::HandleMoveWorldportAckOpcode and WorldSession::HandleMoveTeleportAck
+    if(plMover && plMover->IsBeingTeleported())
+    {
+        recv_data.rpos(recv_data.wpos());                   // prevent warnings spam
+        return;
+    }
     /* extract packet */
 
     MovementInfo movementInfo;
@@ -185,171 +196,128 @@ void WorldSession::HandleMovementOpcodes(WorldPacket & recv_data)
 
     /*----------------*/
 
-    if (recv_data.size() != recv_data.rpos())
-    {
-        sLog.outError("MovementHandler: player %s (guid %d, account %u) sent a packet (opcode %u) that is %u bytes larger than it should be. Kicked as cheater.", _player->GetName(), _player->GetGUIDLow(), _player->GetSession()->GetAccountId(), recv_data.GetOpcode(), recv_data.size() - recv_data.rpos());
-        KickPlayer();
-        return;
-    }
-
     if (!Trinity::IsValidMapCoord(movementInfo.GetPos()->x, movementInfo.GetPos()->y, movementInfo.GetPos()->z, movementInfo.GetPos()->o))
-        return;
-
-    Player * pPlayer = GetPlayer();
-
-    // Handle possessed unit movement separately
-    Unit* pos_unit = pPlayer->GetCharm();
-    if (pos_unit && pos_unit->isPossessed()) // can be charmed but not possessed
     {
-        HandlePossessedMovement(recv_data, movementInfo);
+        recv_data.rpos(recv_data.wpos());                   // prevent warnings spam
         return;
     }
 
-    if (pPlayer->GetDontMove() || pPlayer->isCharmed())
-        return;
-
-    MovementInfo oldMovementInfo = pPlayer->m_movementInfo;
-
-    // No fall damage cheat
-    if (oldMovementInfo.GetMovementFlags() & (MOVEFLAG_FALLING | MOVEFLAG_FALLINGFAR))
+    if (plMover)
     {
-        if (oldMovementInfo.GetFallTime() == 357)
+        MovementInfo oldMovementInfo = plMover->m_movementInfo;
+
+        // No fall damage cheat
+        if (oldMovementInfo.GetMovementFlags() & (MOVEFLAG_FALLING | MOVEFLAG_FALLINGFAR))
         {
-            pPlayer->m_AC_NoFall_count ++;
-            // falltime = 357 <--- WEH  No Fall Damage Cheat
-            sLog.outCheat("Player %s (GUID: %u / ACCOUNT_ID: %u) - possible no fall damage cheat. MapId: %u, falltime: %u, coords old: %f, %f, %f,coords new: %f, %f, %f. MOVEMENTFLAGS: %u LATENCY: %u. BG/Arena: %s",
-                       pPlayer->GetName(), pPlayer->GetGUIDLow(), pPlayer->GetSession()->GetAccountId(), pPlayer->GetMapId(), oldMovementInfo.GetFallTime(), oldMovementInfo.pos.x, oldMovementInfo.pos.y, oldMovementInfo.pos.z, movementInfo.pos.x, movementInfo.pos.y, movementInfo.pos.z, movementInfo.pos.z, movementInfo.GetMovementFlags(), m_latency, pPlayer->GetMap() ? (pPlayer->GetMap()->IsBattleGroundOrArena() ? "Yes" : "No") : "No");
-
-            //pPlayer->Kill(pPlayer, true);
-            if (!(pPlayer->m_AC_NoFall_count % 5))
-                sWorld.SendGMText(LANG_ANTICHEAT_NOFALLDMG, pPlayer->GetName(), pPlayer->m_AC_NoFall_count);
-        }
-    }
-
-/*
-    // TP cheat
-    UnitMoveType m_type = pPlayer->IsFlying() ? MOVE_FLIGHT : pPlayer->IsUnderWater() ? MOVE_SWIM : MOVE_RUN;
-
-    float m_speedRate = pPlayer->GetSpeedRate(m_type);
-    float m_lastSpeedRate = pPlayer->GetLastSpeedRate();
-    float m_speed = pPlayer->GetSpeed(m_type);
-
-    if (!pPlayer->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_TAXI_FLIGHT) && pPlayer->m_taxi.empty() && m_speedRate == m_speed)
-    {
-        Position m_pos = oldMovementInfo.pos;
-        float dx = movementInfo.pos.x - m_pos.x;
-        float dy = movementInfo.pos.y - m_pos.y;
-        float dz = movementInfo.pos.z - m_pos.z;
-        float fDistance3d = sqrt(dx*dx + dy*dy + dz*dz);
-
-        // time between packets
-        uint32 uiDiffTime = WorldTimer::getMSTimeDiff(oldMovementInfo.time, movementInfo.time);
-
-        float fClientRate = (fDistance3d * 1000 / uiDiffTime) / m_speed;
-        float fServerRate = m_speed * uiDiffTime / 1000 +1.0f;
-
-        if (fDistance3d > 500.0f && fClientRate > fServerRate*4 && m_speed +0.2 < m_speed*fClientRate)
-        {
-            pPlayer->m_AC_count++;
-            pPlayer->m_AC_timer = IN_MILISECONDS;   // 1 sek
-
-            sWorld.SendGMText(LANG_ANTICHEAT, pPlayer->GetName(), pPlayer->m_AC_count, m_speed, m_speed*fClientRate);
-
-            sLog.outCheat("Player %s (GUID: %u / ACCOUNT_ID: %u) moved for distance %f with server speed : %f (client speed: %f). MapID: %u, player's coord before X:%f Y:%f Z:%f. Player's coord now X:%f Y:%f Z:%f. MOVEMENTFLAGS: %u LATENCY: %u. BG/Arena: %s",
-                          pPlayer->GetName(), pPlayer->GetGUIDLow(), pPlayer->GetSession()->GetAccountId(), fDistance3d, m_speed, m_speed*fClientRate, pPlayer->GetMapId(), m_pos.x, m_pos.y, m_pos.z, movementInfo.pos.x, movementInfo.pos.y, movementInfo.pos.z, movementInfo.GetMovementFlags(), m_latency, pPlayer->GetMap() ? (pPlayer->GetMap()->IsBattleGroundOrArena() ? "Yes" : "No") : "No");
-            pPlayer->Relocate(oldMovementInfo.pos);
-        }
-    }
-*/
-
-    //Save movement flags
-    pPlayer->SetUnitMovementFlags(movementInfo.GetMovementFlags());
-
-    /* handle special cases */
-    if (movementInfo.HasMovementFlag(MOVEFLAG_ONTRANSPORT))
-    {
-        // transports size limited
-        // (also received at zeppelin leave by some reason with t_* as absolute in continent coordinates, can be safely skipped)
-        if (movementInfo.GetTransportPos()->x > 50 || movementInfo.GetTransportPos()->y > 50 || movementInfo.GetTransportPos()->z > 50)
-            return;
-
-        if (!Trinity::IsValidMapCoord(
-            movementInfo.GetPos()->x + movementInfo.GetTransportPos()->x,
-            movementInfo.GetPos()->y + movementInfo.GetTransportPos()->y,
-            movementInfo.GetPos()->z + movementInfo.GetTransportPos()->z,
-            movementInfo.GetPos()->o + movementInfo.GetTransportPos()->o
-           ))
-            return;
-
-        // if we boarded a transport, add us to it
-        if (!pPlayer->m_transport)
-        {
-            // elevators also cause the client to send MOVEFLAG_ONTRANSPORT - just unmount if the guid can be found in the transport list
-            for (MapManager::TransportSet::iterator iter = sMapMgr.m_Transports.begin(); iter != sMapMgr.m_Transports.end(); ++iter)
+            if (oldMovementInfo.GetFallTime() == 357)
             {
-                if ((*iter)->GetGUID() == movementInfo.t_guid)
-                {
-                    // unmount before boarding
-                    pPlayer->RemoveSpellsCausingAura(SPELL_AURA_MOUNTED);
+                plMover->m_AC_NoFall_count ++;
+                // falltime = 357 <--- WEH  No Fall Damage Cheat
+                sLog.outCheat("Player %s (GUID: %u / ACCOUNT_ID: %u) - possible no fall damage cheat. MapId: %u, falltime: %u, coords old: %f, %f, %f,coords new: %f, %f, %f. MOVEMENTFLAGS: %u LATENCY: %u. BG/Arena: %s",
+                           plMover->GetName(), plMover->GetGUIDLow(), plMover->GetSession()->GetAccountId(), plMover->GetMapId(), oldMovementInfo.GetFallTime(), oldMovementInfo.pos.x, oldMovementInfo.pos.y, oldMovementInfo.pos.z, movementInfo.pos.x, movementInfo.pos.y, movementInfo.pos.z, movementInfo.pos.z, movementInfo.GetMovementFlags(), m_latency, plMover->GetMap() ? (plMover->GetMap()->IsBattleGroundOrArena() ? "Yes" : "No") : "No");
 
-                    pPlayer->m_transport = (*iter);
-                    (*iter)->AddPassenger(pPlayer);
-                    break;
+                //pPlayer->Kill(pPlayer, true);
+                if (!(plMover->m_AC_NoFall_count % 5))
+                    sWorld.SendGMText(LANG_ANTICHEAT_NOFALLDMG, plMover->GetName(), plMover->m_AC_NoFall_count);
+            }
+        }
+
+        plMover->SetUnitMovementFlags(movementInfo.GetMovementFlags());
+
+        /* handle special cases */
+        if (movementInfo.HasMovementFlag(MOVEFLAG_ONTRANSPORT))
+        {
+            // transports size limited
+            // (also received at zeppelin leave by some reason with t_* as absolute in continent coordinates, can be safely skipped)
+            if (movementInfo.GetTransportPos()->x > 50 || movementInfo.GetTransportPos()->y > 50 || movementInfo.GetTransportPos()->z > 50)
+                return;
+
+            if (!Trinity::IsValidMapCoord(
+                movementInfo.GetPos()->x + movementInfo.GetTransportPos()->x,
+                movementInfo.GetPos()->y + movementInfo.GetTransportPos()->y,
+                movementInfo.GetPos()->z + movementInfo.GetTransportPos()->z,
+                movementInfo.GetPos()->o + movementInfo.GetTransportPos()->o
+               ))
+                return;
+
+            // if we boarded a transport, add us to it
+            if (!plMover->m_transport)
+            {
+                // elevators also cause the client to send MOVEFLAG_ONTRANSPORT - just unmount if the guid can be found in the transport list
+                for (MapManager::TransportSet::iterator iter = sMapMgr.m_Transports.begin(); iter != sMapMgr.m_Transports.end(); ++iter)
+                {
+                    if ((*iter)->GetGUID() == movementInfo.t_guid)
+                    {
+                        // unmount before boarding
+                        plMover->RemoveSpellsCausingAura(SPELL_AURA_MOUNTED);
+
+                        plMover->m_transport = (*iter);
+                        (*iter)->AddPassenger(plMover);
+                        break;
+                    }
                 }
             }
         }
+        else if (plMover->m_transport)                      // if we were on a transport, leave
+        {
+            plMover->m_transport->RemovePassenger(plMover);
+            plMover->m_transport = NULL;
+            movementInfo.ClearTransportData();
+        }
+
+        // fall damage generation (ignore in flight case that can be triggered also at lags in moment teleportation to another map).
+        if (opcode == MSG_MOVE_FALL_LAND && !plMover->isInFlight())
+            plMover->HandleFallDamage(movementInfo);
+
+        if (movementInfo.HasMovementFlag(MOVEFLAG_SWIMMING) != plMover->IsInWater())
+        {
+            // now client not include swimming flag in case jumping under water
+            plMover->SetInWater(!plMover->IsInWater() || plMover->GetBaseMap()->IsUnderWater(movementInfo.GetPos()->x, movementInfo.GetPos()->y, movementInfo.GetPos()->z));
+        }
+
+        if (sWorld.m_ac.activated() && !plMover->hasUnitState(UNIT_STAT_LOST_CONTROL | UNIT_STAT_NOT_MOVE) && !plMover->isGameMaster() && plMover->m_AC_timer == 0 && opcode != MSG_MOVE_SET_FACING)
+            sWorld.m_ac.execute(new ACRequest(plMover, GetLatency(), plMover->m_movementInfo, movementInfo, plMover->GetLastSpeedRate()));
+
+        /*----------------------*/
+        uint8 uiMoveType = 0;
+
+        if (plMover->IsFlying())
+           uiMoveType = MOVE_FLIGHT;
+        else if (plMover->IsUnderWater())
+            uiMoveType = MOVE_SWIM;
+        else
+            uiMoveType = MOVE_RUN;
+
+        plMover->SetLastSpeedRate(plMover->GetSpeedRate(UnitMoveType(uiMoveType)));
     }
-    else if (pPlayer->m_transport)                      // if we were on a transport, leave
-    {
-        pPlayer->m_transport->RemovePassenger(pPlayer);
-        pPlayer->m_transport = NULL;
-        movementInfo.ClearTransportData();
-    }
-
-    // fall damage generation (ignore in flight case that can be triggered also at lags in moment teleportation to another map).
-    if (recv_data.GetOpcode() == MSG_MOVE_FALL_LAND && !pPlayer->isInFlight())
-        pPlayer->HandleFallDamage(movementInfo);
-
-    if (movementInfo.HasMovementFlag(MOVEFLAG_SWIMMING) != pPlayer->IsInWater())
-    {
-        // now client not include swimming flag in case jumping under water
-        pPlayer->SetInWater(!pPlayer->IsInWater() || pPlayer->GetBaseMap()->IsUnderWater(movementInfo.GetPos()->x, movementInfo.GetPos()->y, movementInfo.GetPos()->z));
-    }
-
-    if (sWorld.m_ac.activated() && !pPlayer->hasUnitState(UNIT_STAT_LOST_CONTROL | UNIT_STAT_NOT_MOVE) && !pPlayer->isGameMaster() && pPlayer->m_AC_timer == 0 && recv_data.GetOpcode() != MSG_MOVE_SET_FACING)
-        sWorld.m_ac.execute(new ACRequest(pPlayer, GetLatency(), pPlayer->m_movementInfo, movementInfo, pPlayer->GetLastSpeedRate()));
-
-    /*----------------------*/
-    uint8 uiMoveType = 0;
-
-    if (pPlayer->IsFlying())
-       uiMoveType = MOVE_FLIGHT;
-    else if (pPlayer->IsUnderWater())
-        uiMoveType = MOVE_SWIM;
-    else
-        uiMoveType = MOVE_RUN;
-
-    pPlayer->SetLastSpeedRate(pPlayer->GetSpeedRate(UnitMoveType(uiMoveType)));
 
     /* process position-change */
     recv_data.put<uint32>(5, WorldTimer::getMSTime());                  // offset flags(4) + unk(1)
-    WorldPacket data(recv_data.GetOpcode(), (pPlayer->GetPackGUID().size()+recv_data.size()));
-    data << pPlayer->GetPackGUID();
+    WorldPacket data(recv_data.GetOpcode(), (mover->GetPackGUID().size()+recv_data.size()));
+    data << mover->GetPackGUID();
     data.append(recv_data.contents(), recv_data.size());
-    pPlayer->SendMessageToSet(&data, false);
+    mover->SendMessageToSetExcept(&data, _player);
 
-    pPlayer->SetPosition(movementInfo.GetPos()->x, movementInfo.GetPos()->y, movementInfo.GetPos()->z, movementInfo.GetPos()->o);
-    pPlayer->m_movementInfo = movementInfo;
-    pPlayer->UpdateFallInformationIfNeed(movementInfo, recv_data.GetOpcode());
+    if (plMover)
+    {
+        plMover->SetPosition(movementInfo.GetPos()->x, movementInfo.GetPos()->y, movementInfo.GetPos()->z, movementInfo.GetPos()->o);
+        plMover->m_movementInfo = movementInfo;
+        plMover->UpdateFallInformationIfNeed(movementInfo, recv_data.GetOpcode());
 
-    if (pPlayer->isMoving())
-        pPlayer->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_MOVE | AURA_INTERRUPT_FLAG_NOT_SEATED);
+        if (plMover->isMoving())
+            plMover->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_MOVE | AURA_INTERRUPT_FLAG_NOT_SEATED);
 
-    if (pPlayer->isTurning())
-        pPlayer->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TURNING | AURA_INTERRUPT_FLAG_NOT_SEATED);
+        if (plMover->isTurning())
+            plMover->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TURNING | AURA_INTERRUPT_FLAG_NOT_SEATED);
 
-    if (movementInfo.GetPos()->z < -500.0f)
-        pPlayer->HandleFallUnderMap();
+        if (movementInfo.GetPos()->z < -500.0f)
+            plMover->HandleFallUnderMap();
+    }
+    else
+    {
+        if(mover->IsInWorld())
+            mover->GetMap()->CreatureRelocation((Creature*)mover, movementInfo.GetPos()->x, movementInfo.GetPos()->y, movementInfo.GetPos()->z, movementInfo.GetPos()->o);
+    }
 }
 
 void WorldSession::HandlePossessedMovement(WorldPacket& recv_data, MovementInfo& movementInfo)

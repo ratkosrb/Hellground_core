@@ -1540,7 +1540,7 @@ class TRINITY_DLL_SPEC Player : public Unit
         void CheckDuelDistance(time_t currTime);
         void DuelComplete(DuelCompleteType type);
 
-        bool IsGroupVisiblefor (Player* p) const;
+        bool IsGroupVisibleFor(Player* p) const;
         bool IsInSameGroupWith(Player const* p) const;
         bool IsInSameRaidWith(Player const* p) const { return p==this || (GetGroup() != NULL && GetGroup() == p->GetGroup()); }
         void UninviteFromGroup();
@@ -2021,6 +2021,9 @@ class TRINITY_DLL_SPEC Player : public Unit
         void HandleFallUnderMap();
 
         void SetClientControl(Unit* target, uint8 allowMove);
+        void SetMover(Unit* target) { m_mover = target ? target : this; }
+        Unit* GetMover() const { return m_mover; }
+        bool IsSelfMover() const { return m_mover == this; }// normal case for player not controlling other unit
 
         uint64 GetFarSight() const { return GetUInt64Value(PLAYER_FARSIGHT); }
         void SetFarSight(uint64 guid) { SetUInt64Value(PLAYER_FARSIGHT, guid); }
@@ -2062,21 +2065,21 @@ class TRINITY_DLL_SPEC Player : public Unit
 
         bool HaveAtClient(WorldObject const* u) const { return u==this || m_clientGUIDs.find(u->GetGUID())!=m_clientGUIDs.end(); }
 
-        bool canSeeOrDetect(Unit const* u, bool detect, bool inVisibleList = false, bool is3dDistance = true) const;
         bool IsVisibleInGridForPlayer(Player const* pl) const;
         bool IsVisibleGloballyfor (Player* pl) const;
 
-        void UpdateVisibilityOf(WorldObject* target);
         void SendInitialVisiblePackets(Unit* target);
-        void UpdateObjectVisibility(bool forced = true);
-        void UpdateVisibilityForPlayer();
+
+        void UpdateVisibilityOf(WorldObject const* viewPoint, WorldObject* target);
 
         template<class T>
-            void UpdateVisibilityOf(T* target, UpdateData& data, std::set<Unit*>& visibleNow);
+            void UpdateVisibilityOf(WorldObject const* viewPoint, T* target, UpdateData& data, std::set<WorldObject*>& visibleNow);
 
         // Stealth detection system
         uint32 m_DetectInvTimer;
         void HandleStealthedUnitsDetection();
+
+        Camera& GetCamera() { return m_camera; }
 
         uint8 m_forced_speed_changes[MAX_MOVE_TYPE];
 
@@ -2400,6 +2403,9 @@ class TRINITY_DLL_SPEC Player : public Unit
         uint8 m_MirrorTimerFlags;
         uint8 m_MirrorTimerFlagsLast;
         bool m_isInWater;
+
+        Unit *m_mover;
+        Camera m_camera;
 
         GridReference<Player> m_gridRef;
         MapReference m_mapRef;

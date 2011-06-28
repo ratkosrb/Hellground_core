@@ -4241,14 +4241,11 @@ void Spell::EffectAddFarsight(uint32 i)
     }
     dynObj->SetUInt32Value(OBJECT_FIELD_TYPE, 65);
     dynObj->SetUInt32Value(DYNAMICOBJECT_BYTES, 0x80000002);
-    m_caster->AddDynObject(dynObj);
 
-    dynObj->setActive(true);    //must before add to map to be put in world container
+    m_caster->AddDynObject(dynObj);
     m_caster->GetMap()->Add(dynObj); //grid will also be loaded
 
-    // Need to update visibility of object for client to accept farsight guid
-    ((Player*)m_caster)->UpdateVisibilityOf(dynObj);
-    ((Player*)m_caster)->SetFarsightTarget(dynObj);
+    ((Player*)m_caster)->GetCamera().SetView(dynObj);
 }
 
 void Spell::EffectSummonWild(uint32 i)
