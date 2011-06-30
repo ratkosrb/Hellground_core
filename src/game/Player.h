@@ -898,7 +898,7 @@ class AntiCheat
         uint32 GetTimer() const { return m_timer; }
 
         uint32 GetAlertCount() const { return m_count; }
-        uint32 GetNoFallCount() const { return m_count; }
+        uint32 GetNoFallCount() const { return m_nofall_count; }
 
         void IncrementAlertCount() { m_count++; }
         void IncrementNoFallCount() { m_nofall_count++; }
