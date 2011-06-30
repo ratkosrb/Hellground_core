@@ -666,7 +666,6 @@ void Map::Remove(Player *player, bool remove)
     RemoveFromGrid(player,grid,cell);
 
     SendRemoveTransports(player);
-
     UpdateObjectVisibility(player,cell,p);
 
     if (remove)

@@ -9466,8 +9466,8 @@ bool Unit::isVisibleForOrDetect(Unit const* u, WorldObject const* viewPoint, boo
     }
 
     // unit got in stealth in this moment and must ignore old detected state
-    if (m_Visibility == VISIBILITY_GROUP_NO_DETECT)
-        return false;
+    //if (m_Visibility == VISIBILITY_GROUP_NO_DETECT)
+    //    return false;
 
     // GM invisibility checks early, invisibility if any detectable, so if not stealth then visible
     if (m_Visibility != VISIBILITY_GROUP_STEALTH)
@@ -9484,7 +9484,7 @@ bool Unit::isVisibleForOrDetect(Unit const* u, WorldObject const* viewPoint, boo
     // Special cases
 
     // If is attacked then stealth is lost, some creature can use stealth too
-    if( !getAttackers().empty() )
+    if (!getAttackers().empty())
         return true;
 
     // If there is collision rogue is seen regardless of level difference
@@ -9500,7 +9500,7 @@ bool Unit::isVisibleForOrDetect(Unit const* u, WorldObject const* viewPoint, boo
 
     //Always invisible from back (when stealth detection is on), also filter max distance cases
     bool isInFront = viewPoint->isInFrontInMap(this, visibleDistance);
-    if(!isInFront)
+    if (!isInFront)
         return false;
 
     // if doesn't have stealth detection (Shadow Sight), then check how stealthy the unit is, otherwise just check los
@@ -9531,9 +9531,7 @@ bool Unit::isVisibleForOrDetect(Unit const* u, WorldObject const* viewPoint, boo
     }
 
     // Now check is target visible with LoS
-    //float ox,oy,oz;
-    //viewPoint->GetPosition(ox,oy,oz);
-    return true;//IsWithinLOS(ox,oy,oz);
+    return true;
 }
 
 bool Unit::canSeeOrDetect(Unit const* u, WorldObject const* viewPoint, bool detect, bool inVisibleList, bool is3dDistance) const
@@ -9640,7 +9638,7 @@ void Unit::SetVisibility(UnitVisibility x)
     if (IsInWorld())
     {
         // some auras requires visible target
-        if (m_Visibility == VISIBILITY_GROUP_NO_DETECT || m_Visibility == VISIBILITY_OFF)
+        if (/*m_Visibility == VISIBILITY_GROUP_NO_DETECT || */m_Visibility == VISIBILITY_OFF)
         {   
             static const AuraType auratypes[] = {SPELL_AURA_BIND_SIGHT, SPELL_AURA_FAR_SIGHT, SPELL_AURA_NONE};
             for (AuraType const* type = &auratypes[0]; *type != SPELL_AURA_NONE; ++type)
@@ -10356,7 +10354,7 @@ Creature* Unit::GetCreature(uint64 guid)
     return GetMap()->GetCreature(guid);
 }
 
-bool Unit::isVisibleForInState(Player const* u, WorldObject const* viewPoint, bool inVisibleList) const
+bool Unit::isVisibleForInState(Player const* u, WorldObject const* viewPoint, bool inVisibleList ) const
 {
     return isVisibleForOrDetect(u, viewPoint, false, inVisibleList, false);
 }

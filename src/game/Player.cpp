@@ -17557,9 +17557,8 @@ void Player::HandleStealthedUnitsDetection()
     WorldObject const* viewPoint = GetCamera().GetBody();
 
     for (std::list<Unit*>::const_iterator i = stealthedUnits.begin(); i != stealthedUnits.end(); ++i)
-    for (std::list<Unit*>::const_iterator i = stealthedUnits.begin(); i != stealthedUnits.end(); ++i)
     {
-        if ((*i) == this)
+        if((*i)==this)
             continue;
 
         bool hasAtClient = HaveAtClient((*i));
@@ -18404,6 +18403,10 @@ bool Player::IsVisibleInGridForPlayer(Player const * pl) const
 {
     // gamemaster in GM mode see all, including ghosts
     if (pl->isGameMaster() && GetSession()->GetSecurity() <= pl->GetSession()->GetSecurity())
+        return true;
+
+    // player see dead player/ghost from own group/raid
+    if (IsInSameRaidWith(pl))
         return true;
 
     // It seems in battleground everyone sees everyone, except the enemy-faction ghosts
