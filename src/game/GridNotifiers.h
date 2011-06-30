@@ -80,6 +80,11 @@ namespace Trinity
         #endif
     };
 
+    #ifndef WIN32
+    template<> inline void Trinity::CreatureRelocationNotifier::Visit(CreatureMapType &m);
+    template<> inline void Trinity::CreatureRelocationNotifier::Visit(PlayerMapType &m);
+    #endif
+
     struct TRINITY_DLL_DECL GridUpdater
     {
         GridType &i_grid;
@@ -91,7 +96,7 @@ namespace Trinity
             for (typename GridRefManager<T>::iterator iter = m.begin(); iter != m.end(); ++iter)
             {
                 WorldObject::UpdateHelper helper(iter->getSource());
-                helper.Update(i_timeDiff); 
+                helper.Update(i_timeDiff);
             }
         }
 
