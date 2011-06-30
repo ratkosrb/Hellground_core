@@ -2274,6 +2274,12 @@ void Player::SetInWater(bool apply)
 
 void Player::SetGameMaster(bool on)
 {
+    if (GetVisibility() == VISIBILITY_OFF && !on)
+    {
+        ChatHandler(this).PSendSysMessage("You can't set GM OFF, beacause currently you have INVISIBILITY_OFF");
+        return;
+    }
+
     if (on)
     {
         m_ExtraFlags |= PLAYER_EXTRA_GM_ON;
