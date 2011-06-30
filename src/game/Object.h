@@ -314,7 +314,6 @@ class TRINITY_DLL_SPEC Object
         virtual void _SetCreateBits(UpdateMask *updateMask, Player *target) const;
         void BuildMovementUpdate(ByteBuffer * data, uint8 updateFlags) const;
         void BuildValuesUpdate(uint8 updatetype, ByteBuffer *data, UpdateMask *updateMask, Player *target) const;
-        void BuildUpdateDataForPlayer(Player* pl, UpdateDataMapType& update_players);
 
         uint16 m_objectType;
 

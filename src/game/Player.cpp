@@ -259,10 +259,6 @@ Player::Player (WorldSession *session): Unit(), m_mover(this), m_camera(this)
 {
     m_transport = 0;
 
-    m_AC_timer = 0;
-    m_AC_count = 0;
-    m_AC_NoFall_count = 0;
-
     m_speakTime = 0;
     m_speakCount = 0;
 
@@ -1150,12 +1146,14 @@ void Player::Update(uint32 update_diff, uint32 p_time)
         return;
     }
 
-    if (m_AC_timer)
+    if (uint32 ac_timer = AC.GetTimer())
     {
-        if (m_AC_timer < update_diff)
-            m_AC_timer = 0;
+        if (ac_timer < update_diff)
+            ac_timer = 0;
         else
-            m_AC_timer -= update_diff;
+            ac_timer -= update_diff;
+
+        AC.SetTimer(ac_timer);
     }
 
     // undelivered mail
@@ -1708,7 +1706,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
 
     SetSemaphoreTeleport(true);
 
-    m_AC_timer = 3000;
+    AC.SetTimer(3*IN_MILISECONDS);
 
     // The player was ported to another map and looses the duel immediatly.
     // We have to perform this check before the teleport, otherwise the

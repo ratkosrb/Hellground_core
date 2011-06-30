@@ -9005,7 +9005,7 @@ void Unit::Unmount()
     RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_MOUNT);
 
     if (GetTypeId() == TYPEID_PLAYER)
-        ((Player*)this)->m_AC_timer = 5000;
+        ((Player*)this)->AC.SetTimer(5*IN_MILISECONDS);
 
     // only resummon old pet if the player is already added to a map
     // this prevents adding a pet to a not created map which would otherwise cause a crash
@@ -9679,7 +9679,7 @@ void Unit::UpdateSpeed(UnitMoveType mtype, bool forced)
     float non_stack_bonus = 1.0f;
 
     if (GetTypeId() == TYPEID_PLAYER)
-        ((Player *)this)->m_AC_timer = 2000;
+        ((Player *)this)->AC.SetTimer(2*IN_MILISECONDS);
 
     switch (mtype)
     {
@@ -9796,7 +9796,7 @@ void Unit::SetSpeed(UnitMoveType mtype, float rate, bool forced)
         return;
 
     if (GetTypeId() == TYPEID_PLAYER)
-        ((Player *)this)->m_AC_timer = 2000;
+        ((Player *)this)->AC.SetTimer(2*IN_MILISECONDS);
 
     m_speed_rate[mtype] = rate;
 
@@ -13059,7 +13059,7 @@ void Unit::KnockBackFrom(Unit* target, float horizintalSpeed, float verticalSpee
         data << float(-verticalSpeed);                      // Z Movement speed (vertical)
         ((Player*)this)->GetSession()->SendPacket(&data);
 
-        ((Player*)this)->m_AC_timer = 5 *IN_MILISECONDS;
+        ((Player*)this)->AC.SetTimer(5*IN_MILISECONDS);
     }
     else
     {

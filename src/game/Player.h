@@ -886,6 +886,33 @@ class TRINITY_DLL_SPEC PlayerTaxi
         std::deque<uint32> m_TaxiDestinations;
 };
 
+class AntiCheat
+{
+    public:
+        AntiCheat() : m_timer(0), m_count(0), m_nofall_count(0), m_speedRate(0.0f) {}
+
+        float GetLastSpeedRate() const { return m_speedRate; }
+        void SetLastSpeedRate(float SpeedRate) { m_speedRate = SpeedRate; }
+
+        void SetTimer(uint32 tTimer) { m_timer = tTimer; }
+        uint32 GetTimer() const { return m_timer; }
+
+        uint32 GetAlertCount() const { return m_count; }
+        uint32 GetNoFallCount() const { return m_count; }
+
+        void IncrementAlertCount() { m_count++; }
+        void IncrementNoFallCount() { m_nofall_count++; }
+
+    private:
+        uint32 m_timer;
+        uint32 m_count;
+        uint32 m_nofall_count;
+
+        float m_speedRate;
+
+        //MovementInfo oldMovement;
+};
+
 class TRINITY_DLL_SPEC Player : public Unit
 {
     friend class WorldSession;
@@ -1768,14 +1795,8 @@ class TRINITY_DLL_SPEC Player : public Unit
         /*********************************************************/
         /***                 ANTICHEAT SYSTEM                  ***/
         /*********************************************************/
-        float GetLastSpeedRate() { return fLastSpeedRate; }
-        void SetLastSpeedRate(float fSpeedRateRate) { fLastSpeedRate = fSpeedRateRate; }
 
-        uint32 m_AC_timer;
-        uint32 m_AC_count;
-        uint32 m_AC_NoFall_count;
-
-        float fLastSpeedRate;
+        AntiCheat AC;
 
         /*********************************************************/
         /***                  PVP SYSTEM                       ***/

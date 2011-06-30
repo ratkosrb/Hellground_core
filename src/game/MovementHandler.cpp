@@ -211,14 +211,14 @@ void WorldSession::HandleMovementOpcodes(WorldPacket & recv_data)
         {
             if (oldMovementInfo.GetFallTime() == 357)
             {
-                plMover->m_AC_NoFall_count ++;
+                plMover->AC.IncrementNoFallCount();
                 // falltime = 357 <--- WEH  No Fall Damage Cheat
                 sLog.outCheat("Player %s (GUID: %u / ACCOUNT_ID: %u) - possible no fall damage cheat. MapId: %u, falltime: %u, coords old: %f, %f, %f,coords new: %f, %f, %f. MOVEMENTFLAGS: %u LATENCY: %u. BG/Arena: %s",
                            plMover->GetName(), plMover->GetGUIDLow(), plMover->GetSession()->GetAccountId(), plMover->GetMapId(), oldMovementInfo.GetFallTime(), oldMovementInfo.pos.x, oldMovementInfo.pos.y, oldMovementInfo.pos.z, movementInfo.pos.x, movementInfo.pos.y, movementInfo.pos.z, movementInfo.pos.z, movementInfo.GetMovementFlags(), m_latency, plMover->GetMap() ? (plMover->GetMap()->IsBattleGroundOrArena() ? "Yes" : "No") : "No");
 
                 //pPlayer->Kill(pPlayer, true);
-                if (!(plMover->m_AC_NoFall_count % 5))
-                    sWorld.SendGMText(LANG_ANTICHEAT_NOFALLDMG, plMover->GetName(), plMover->m_AC_NoFall_count);
+                if (!(plMover->AC.GetNoFallCount() % 5))
+                    sWorld.SendGMText(LANG_ANTICHEAT_NOFALLDMG, plMover->GetName(), plMover->AC.GetNoFallCount());
             }
         }
 
@@ -275,8 +275,8 @@ void WorldSession::HandleMovementOpcodes(WorldPacket & recv_data)
             plMover->SetInWater(!plMover->IsInWater() || plMover->GetBaseMap()->IsUnderWater(movementInfo.GetPos()->x, movementInfo.GetPos()->y, movementInfo.GetPos()->z));
         }
 
-        if (sWorld.m_ac.activated() && !plMover->hasUnitState(UNIT_STAT_LOST_CONTROL | UNIT_STAT_NOT_MOVE) && !plMover->isGameMaster() && plMover->m_AC_timer == 0 && opcode != MSG_MOVE_SET_FACING)
-            sWorld.m_ac.execute(new ACRequest(plMover, GetLatency(), plMover->m_movementInfo, movementInfo, plMover->GetLastSpeedRate()));
+        if (sWorld.m_ac.activated() && !plMover->hasUnitState(UNIT_STAT_LOST_CONTROL | UNIT_STAT_NOT_MOVE) && !plMover->isGameMaster() && plMover->AC.GetTimer() == 0 && opcode != MSG_MOVE_SET_FACING)
+            sWorld.m_ac.execute(new ACRequest(plMover, GetLatency(), plMover->m_movementInfo, movementInfo, plMover->AC.GetLastSpeedRate()));
 
         /*----------------------*/
         uint8 uiMoveType = 0;
@@ -288,7 +288,7 @@ void WorldSession::HandleMovementOpcodes(WorldPacket & recv_data)
         else
             uiMoveType = MOVE_RUN;
 
-        plMover->SetLastSpeedRate(plMover->GetSpeedRate(UnitMoveType(uiMoveType)));
+        plMover->AC.SetLastSpeedRate(plMover->GetSpeedRate(UnitMoveType(uiMoveType)));
     }
 
     /* process position-change */

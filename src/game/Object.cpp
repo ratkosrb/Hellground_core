@@ -288,7 +288,9 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint8 updateFlags) const
 
                 if (((Player*)this)->isInFlight())
                 {
-                    WPAssert(((Player*)this)->GetMotionMaster()->GetCurrentMovementGeneratorType() == FLIGHT_MOTION_TYPE);
+                    if (((Player*)this)->GetMotionMaster()->GetCurrentMovementGeneratorType() != FLIGHT_MOTION_TYPE)
+                        break;
+
                     moveFlags = (MOVEFLAG_FORWARD | MOVEFLAG_SPLINE_ENABLED);
                 }
             }
@@ -717,7 +719,6 @@ void Object::ClearUpdateMask(bool remove)
     }
 }
 
-
 bool Object::LoadValues(const char* data)
 {
     if (!m_uint32Values) _InitValues();
@@ -1029,20 +1030,6 @@ bool Object::PrintIndexError(uint32 index, bool set) const
 
     // assert must fail after function call
     return false;
-}
-
-void Object::BuildUpdateDataForPlayer(Player* pl, UpdateDataMapType& update_players)
-{
-    UpdateDataMapType::iterator iter = update_players.find(pl);
-
-    if (iter == update_players.end())
-    {
-        std::pair<UpdateDataMapType::iterator, bool> p = update_players.insert( UpdateDataMapType::value_type(pl, UpdateData()) );
-        ASSERT(p.second);
-        iter = p.first;
-    }
-
-    BuildValuesUpdateBlockForPlayer(&iter->second, iter->first);
 }
 
 WorldObject::WorldObject()
@@ -2194,7 +2181,7 @@ struct WorldObjectChangeAccumulator
         // send self fields changes in another way, otherwise
         // with new camera system when player's camera too far from player, camera wouldn't receive packets and changes from player
         if(i_object.isType(TYPEMASK_PLAYER))
-            i_object.BuildUpdateDataForPlayer((Player*)&i_object, i_updateDatas);
+            i_object.BuildFieldsUpdate((Player*)&i_object, i_updateDatas);
     }
 
     void Visit(CameraMapType &m)
@@ -2203,7 +2190,7 @@ struct WorldObjectChangeAccumulator
         {
             Player* owner = iter->getSource()->GetOwner();
             if(owner != &i_object && owner->HaveAtClient(&i_object))
-                i_object.BuildUpdateDataForPlayer(owner, i_updateDatas);
+                i_object.BuildFieldsUpdate(owner, i_updateDatas);
         }
     }
 
