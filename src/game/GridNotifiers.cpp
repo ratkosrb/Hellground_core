@@ -56,9 +56,20 @@ void VisibleNotifier::Notify()
     }
 
     // generate outOfRange for not iterate objects
-    i_data.AddOutOfRangeGUID(i_clientGUIDs);
     for (Player::ClientGUIDs::iterator itr = i_clientGUIDs.begin(); itr != i_clientGUIDs.end(); ++itr)
+    {
         player.m_clientGUIDs.erase(*itr);
+        i_data.AddOutOfRangeGUID(*itr);
+
+        if (!IS_PLAYER_GUID(*itr))
+            continue;
+
+        if (Player *plr = ObjectAccessor::FindPlayer(*itr))
+        {
+            if (plr->IsInWorld())
+                plr->UpdateVisibilityOf(plr->GetCamera().GetBody(), &player);
+        }
+    }
 
     if (i_data.HasData())
     {
@@ -66,17 +77,6 @@ void VisibleNotifier::Notify()
         WorldPacket packet;
         i_data.BuildPacket(&packet);
         player.GetSession()->SendPacket(&packet);
-
-        // send out of range to other players if need
-        Player::ClientGUIDs const& oor = i_data.GetOutOfRangeGUIDs();
-        for (Player::ClientGUIDs::const_iterator iter = oor.begin(); iter != oor.end(); ++iter)
-        {
-            if (!IS_PLAYER_GUID(*iter))
-                continue;
-
-            if (Player* plr = ObjectAccessor::FindPlayer(*iter))
-                plr->UpdateVisibilityOf(plr->GetCamera().GetBody(), &player);
-        }
     }
 
     // Now do operations that required done at object visibility change to visible
@@ -93,8 +93,8 @@ void VisibleNotifier::Notify()
         {
             ((Creature*)(*vItr))->SendMonsterMoveWithSpeedToCurrentDestination(&player);
 
-            //comment out this, we will see if we need it :]
-            //((Creature*)(*vItr))->SendMeleeAttackStart(((Creature*)(*vItr))->getVictim());
+            if (((Creature*)(*vItr))->getVictim())
+                ((Creature*)(*vItr))->SendMeleeAttackStart(((Creature*)(*vItr))->getVictim());
         }
     }
 }

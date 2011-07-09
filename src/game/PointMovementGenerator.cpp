@@ -76,7 +76,7 @@ void PointMovementGenerator<T>:: Finalize(T &unit)
     if (unit.hasUnitState(UNIT_STAT_CHARGING))
         unit.clearUnitState(UNIT_STAT_CHARGING | UNIT_STAT_JUMPING);
 
-    unit.clearUnitState(UNIT_STAT_ROAMINGE);
+    unit.clearUnitState(UNIT_STAT_ROAMING);
 
     if (i_destinationHolder.HasArrived()) // without this crash!
         MovementInform(unit);
