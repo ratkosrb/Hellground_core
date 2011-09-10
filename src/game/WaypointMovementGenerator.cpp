@@ -324,7 +324,7 @@ bool FlightPathMovementGenerator::Update(Player &player, const uint32 &diff)
         bool departureEvent = true;
         do
         {
-            //DoEventIfAny(player,(*i_path)[i_currentNode],departureEvent);
+            DoEventIfAny(player,(*i_path)[i_currentNode],departureEvent);
             if (pointId == i_currentNode)
                 break;
             i_currentNode += (uint32)departureEvent;
@@ -354,22 +354,21 @@ void FlightPathMovementGenerator::SetCurrentNodeAfterTeleport()
 
 void FlightPathMovementGenerator::DoEventIfAny(Player& player, TaxiPathNodeEntry const& node, bool departure)
 {
-   //if (uint32 eventid = departure ? node.departureEventID : node.arrivalEventID)
+    if (uint32 eventid = departure ? node.departureEventID : node.arrivalEventID)
     {
         //DEBUG_FILTER_LOG(LOG_FILTER_AI_AND_MOVEGENSS, "Taxi %s event %u of node %u of path %u for player %s", departure ? "departure" : "arrival", eventid, node.index, node.path, player.GetName());
 
         //if (!sScriptMgr.OnProcessEvent(eventid, &player, &player, departure))
-        //player.GetMap()->ScriptsStart(sEventScripts, eventid, &player, &player);
+            player.GetMap()->ScriptsStart(sEventScripts, eventid, &player, &player);
     }
 }
 
 bool FlightPathMovementGenerator::GetResetPosition(Player&, float& x, float& y, float& z)
 {
-    //const TaxiPathNodeEntry& node = (*i_path)[i_currentNode];
-    //x = node.x; y = node.y; z = node.z;
+    const TaxiPathNodeEntry& node = (*i_path)[i_currentNode];
+    x = node.x; y = node.y; z = node.z;
     return true;
 }
-
 //
 // Unique1's ASTAR Pathfinding Code... For future use & reference...
 //
