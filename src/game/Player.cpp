@@ -173,7 +173,7 @@ void PlayerTaxi::LoadTaxiMask(const char* data)
     for (iter = tokens.begin(), index = 0;
         (index < TaxiMaskSize) && (iter != tokens.end()); ++iter, ++index)
     {
-        // load and set bits only for existed taxi nodes
+        // load and set bits only for existing taxi nodes
         m_taximask[index] = sTaxiNodesMask[index] & uint32(atol((*iter).c_str()));
     }
 }
@@ -182,12 +182,12 @@ void PlayerTaxi::AppendTaximaskTo(ByteBuffer& data, bool all)
 {
     if (all)
     {
-        for (uint8 i=0; i<TaxiMaskSize; i++)
-            data << uint32(sTaxiNodesMask[i]);              // all existed nodes
+        for (uint8 i=0; i<TaxiMaskSize; ++i)
+            data << uint32(sTaxiNodesMask[i]);              // all existing nodes
     }
     else
     {
-        for (uint8 i=0; i<TaxiMaskSize; i++)
+        for (uint8 i=0; i<TaxiMaskSize; ++i)
             data << uint32(m_taximask[i]);                  // known nodes
     }
 }
@@ -215,10 +215,14 @@ bool PlayerTaxi::LoadTaxiDestinationsFromString(const std::string& values)
     {
         uint32 cost;
         uint32 path;
-        objmgr.GetTaxiPath(m_TaxiDestinations[i-1],m_TaxiDestinations[i],path,cost);
+        objmgr.GetTaxiPath(m_TaxiDestinations[i-1],m_TaxiDestinations[i], path, cost);
         if (!path)
             return false;
     }
+
+    // can't load taxi path without mount set (quest taxi path?)
+    //if (!objmgr.GetTaxiMount(GetTaxiSource(), team))
+    //    return false;
 
     return true;
 }
@@ -17759,6 +17763,59 @@ bool Player::ActivateTaxiPathTo(std::vector<uint32> const& nodes, uint32 mount_i
     GetSession()->SendDoFlight(mount_id, sourcepath);
 
     return true;
+}
+
+void Player::ContinueTaxiFlight()
+{
+    if (uint32 sourceNode = m_taxi.GetTaxiSource())
+    {
+
+        sLog.outDebug("WORLD: Restart character %u taxi flight", GetGUIDLow());
+
+        uint32 MountId = objmgr.GetTaxiMount(sourceNode, GetTeam());
+        uint32 path = m_taxi.GetCurrentTaxiPath();
+
+        // search appropriate start path node
+        uint32 startNode = 0;
+
+        TaxiPathNodeList const& nodeList = sTaxiPathNodesByPath[path];
+
+        float distPrev = MAP_SIZE*MAP_SIZE;
+        float distNext =
+            (nodeList[0].x-GetPositionX())*(nodeList[0].x-GetPositionX())+
+            (nodeList[0].y-GetPositionY())*(nodeList[0].y-GetPositionY())+
+            (nodeList[0].z-GetPositionZ())*(nodeList[0].z-GetPositionZ());
+
+        for (uint32 i = 1; i < nodeList.size(); ++i)
+        {
+            TaxiPathNodeEntry const& node = nodeList[i];
+            TaxiPathNodeEntry const& prevNode = nodeList[i-1];
+
+            // skip nodes at another map
+            if (node.mapid != GetMapId())
+                continue;
+
+            distPrev = distNext;
+
+            distNext =
+                (node.x-GetPositionX())*(node.x-GetPositionX())+
+                (node.y-GetPositionY())*(node.y-GetPositionY())+
+                (node.z-GetPositionZ())*(node.z-GetPositionZ());
+
+            float distNodes =
+                (node.x-prevNode.x)*(node.x-prevNode.x)+
+                (node.y-prevNode.y)*(node.y-prevNode.y)+
+                (node.z-prevNode.z)*(node.z-prevNode.z);
+
+            if (distNext + distPrev < distNodes)
+            {
+                startNode = i;
+                break;
+            }
+        }
+
+        m_session->SendDoFlight(MountId, path, startNode);
+    }
 }
 
 void Player::CleanupAfterTaxiFlight()

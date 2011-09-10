@@ -53,6 +53,7 @@
 #include "VMapFactory.h"
 #include "UnitAI.h"
 
+#include "MovementGenerator.h"
 #include "movement/MoveSplineInit.h"
 #include "movement/MoveSpline.h"
 
@@ -9295,12 +9296,31 @@ void Unit::SetVisibility(UnitVisibility x)
 
 void Unit::UpdateSpeed(UnitMoveType mtype, bool forced)
 {
-    int32 main_speed_mod  = 0;
-    float stack_bonus     = 1.0f;
-    float non_stack_bonus = 1.0f;
+    // not in combat pet have same speed as owner
+    switch (mtype)
+    {
+        case MOVE_RUN:
+        case MOVE_WALK:
+        case MOVE_SWIM:
+            if (GetTypeId() == TYPEID_UNIT && ((Creature*)this)->isPet() && hasUnitState(UNIT_STAT_FOLLOW))
+            {
+                if(Unit* owner = GetOwner())
+                {
+                    SetSpeed(mtype, owner->GetSpeedRate(mtype), forced);
+                    return;
+                }
+            }
+            break;
+        default:
+            break;
+    }
 
     if (GetTypeId() == TYPEID_PLAYER)
         ((Player *)this)->m_AC_timer = 2000;
+
+    int32 main_speed_mod  = 0;
+    float stack_bonus     = 1.0f;
+    float non_stack_bonus = 1.0f;
 
     switch (mtype)
     {
@@ -9350,10 +9370,6 @@ void Unit::UpdateSpeed(UnitMoveType mtype, bool forced)
 
     float bonus = non_stack_bonus > stack_bonus ? non_stack_bonus : stack_bonus;
 
-    //apply creature's base speed
-    if (GetTypeId() == TYPEID_UNIT)
-        bonus *= ((Creature*)this)->GetBaseSpeed();
-
     // now we ready for speed calculation
     float speed  = main_speed_mod ? bonus*(100.0f + main_speed_mod)/100.0f : bonus;
 
@@ -9378,9 +9394,11 @@ void Unit::UpdateSpeed(UnitMoveType mtype, bool forced)
             break;
     }
 
-    if (Unit* owner = GetOwner()) {
-        float owner_speed = owner->GetMaxSpeedRate(mtype) * 1.1f;
-        speed = owner_speed > speed ? owner_speed : speed;
+    // for creature case, we check explicit if mob searched for assistance
+    if (GetTypeId() == TYPEID_UNIT)
+    {
+        if (((Creature*)this)->HasSearchedAssistance())
+            speed *= 0.66f;                                 // best guessed value, so this will be 33% reduction. Based off initial speed, mob can then "run", "walk fast" or "walk".
     }
 
     // Apply strongest slow aura mod to speed
@@ -9390,16 +9408,20 @@ void Unit::UpdateSpeed(UnitMoveType mtype, bool forced)
     if (slow)
         speed *=(100.0f + slow)/100.0f;
 
-    //store max possible speed
-    m_max_speed_rate[mtype] = speed;
+    if (GetTypeId() == TYPEID_UNIT)
+    {
+        switch(mtype)
+        {
+            case MOVE_RUN:
+            case MOVE_WALK:
+                speed *= ((Creature*)this)->GetCreatureInfo()->speed;
+                break;
+            default:
+                break;
+        }
+    }
 
-    // on follow TMG handels speed change
-    if (!hasUnitState(UNIT_STAT_FOLLOW))
-        SetSpeed(mtype, speed, forced);
-
-    // update speed of pets
-    if (Pet *pet = GetPet())
-        pet->UpdateSpeed(mtype, forced);
+    SetSpeed(mtype, speed, forced);
 }
 
 float Unit::GetSpeed(UnitMoveType mtype) const
@@ -9413,108 +9435,54 @@ void Unit::SetSpeed(UnitMoveType mtype, float rate, bool forced)
         rate = 0.0f;
 
     // Update speed only on change
-    if (m_speed_rate[mtype] == rate)
-        return;
-
-    if (GetTypeId() == TYPEID_PLAYER)
-        ((Player *)this)->m_AC_timer = 2000;
-
-    m_speed_rate[mtype] = rate;
-
-    propagateSpeedChange();
-
-    // Send speed change packet only for player
-    if (GetTypeId()!=TYPEID_PLAYER)
-        return;
-
-    WorldPacket data;
-    if (!forced)
+    if (m_speed_rate[mtype] != rate)
     {
-        switch (mtype)
-        {
-            case MOVE_WALK:
-                data.Initialize(MSG_MOVE_SET_WALK_SPEED, 8+4+1+4+4+4+4+4+4+4);
-                break;
-            case MOVE_RUN:
-                data.Initialize(MSG_MOVE_SET_RUN_SPEED, 8+4+1+4+4+4+4+4+4+4);
-                break;
-            case MOVE_RUN_BACK:
-                data.Initialize(MSG_MOVE_SET_RUN_BACK_SPEED, 8+4+1+4+4+4+4+4+4+4);
-                break;
-            case MOVE_SWIM:
-                data.Initialize(MSG_MOVE_SET_SWIM_SPEED, 8+4+1+4+4+4+4+4+4+4);
-                break;
-            case MOVE_SWIM_BACK:
-                data.Initialize(MSG_MOVE_SET_SWIM_BACK_SPEED, 8+4+1+4+4+4+4+4+4+4);
-                break;
-            case MOVE_TURN_RATE:
-                data.Initialize(MSG_MOVE_SET_TURN_RATE, 8+4+1+4+4+4+4+4+4+4);
-                break;
-            case MOVE_FLIGHT:
-                data.Initialize(MSG_MOVE_SET_FLIGHT_SPEED, 8+4+1+4+4+4+4+4+4+4);
-                break;
-            case MOVE_FLIGHT_BACK:
-                data.Initialize(MSG_MOVE_SET_FLIGHT_BACK_SPEED, 8+4+1+4+4+4+4+4+4+4);
-                break;
-            default:
-                sLog.outError("Unit::SetSpeed: Unsupported move type (%d), data not sent to client.",mtype);
-                return;
-        }
+        m_speed_rate[mtype] = rate;
+        propagateSpeedChange();
 
-        data << GetPackGUID();
-        data << uint32(0);                                  //movement flags
-        data << uint8(0);                                   //unk
-        data << uint32(WorldTimer::getMSTime());
-        data << float(GetPositionX());
-        data << float(GetPositionY());
-        data << float(GetPositionZ());
-        data << float(GetOrientation());
-        data << uint32(0);                                  //flag unk
-        data << float(GetSpeed(mtype));
-        SendMessageToSet(&data, true);
-    }
-    else
-    {
-        // register forced speed changes for WorldSession::HandleForceSpeedChangeAck
-        // and do it only for real sent packets and use run for run/mounted as client expected
-        ++((Player*)this)->m_forced_speed_changes[mtype];
-        switch (mtype)
+        const uint16 SetSpeed2Opc_table[MAX_MOVE_TYPE][2]=
         {
-            case MOVE_WALK:
-                data.Initialize(SMSG_FORCE_WALK_SPEED_CHANGE, 16);
-                break;
-            case MOVE_RUN:
-                data.Initialize(SMSG_FORCE_RUN_SPEED_CHANGE, 17);
-                break;
-            case MOVE_RUN_BACK:
-                data.Initialize(SMSG_FORCE_RUN_BACK_SPEED_CHANGE, 16);
-                break;
-            case MOVE_SWIM:
-                data.Initialize(SMSG_FORCE_SWIM_SPEED_CHANGE, 16);
-                break;
-            case MOVE_SWIM_BACK:
-                data.Initialize(SMSG_FORCE_SWIM_BACK_SPEED_CHANGE, 16);
-                break;
-            case MOVE_TURN_RATE:
-                data.Initialize(SMSG_FORCE_TURN_RATE_CHANGE, 16);
-                break;
-            case MOVE_FLIGHT:
-                data.Initialize(SMSG_FORCE_FLIGHT_SPEED_CHANGE, 16);
-                break;
-            case MOVE_FLIGHT_BACK:
-                data.Initialize(SMSG_FORCE_FLIGHT_BACK_SPEED_CHANGE, 16);
-                break;
-            default:
-                sLog.outError("Unit::SetSpeed: Unsupported move type (%d), data not sent to client.",mtype);
-                return;
+            {MSG_MOVE_SET_WALK_SPEED,       SMSG_FORCE_WALK_SPEED_CHANGE},
+            {MSG_MOVE_SET_RUN_SPEED,        SMSG_FORCE_RUN_SPEED_CHANGE},
+            {MSG_MOVE_SET_RUN_BACK_SPEED,   SMSG_FORCE_RUN_BACK_SPEED_CHANGE},
+            {MSG_MOVE_SET_SWIM_SPEED,       SMSG_FORCE_SWIM_SPEED_CHANGE},
+            {MSG_MOVE_SET_SWIM_BACK_SPEED,  SMSG_FORCE_SWIM_BACK_SPEED_CHANGE},
+            {MSG_MOVE_SET_TURN_RATE,        SMSG_FORCE_TURN_RATE_CHANGE},
+            {MSG_MOVE_SET_FLIGHT_SPEED,     SMSG_FORCE_FLIGHT_SPEED_CHANGE},
+            {MSG_MOVE_SET_FLIGHT_BACK_SPEED,SMSG_FORCE_FLIGHT_BACK_SPEED_CHANGE}
+        };
+
+        if (forced)
+        {
+            if (GetTypeId() == TYPEID_PLAYER)
+            {
+                // register forced speed changes for WorldSession::HandleForceSpeedChangeAck
+                // and do it only for real sent packets and use run for run/mounted as client expected
+                ++((Player*)this)->m_forced_speed_changes[mtype];
+            }
+
+            WorldPacket data(SetSpeed2Opc_table[mtype][1], 18);
+            data << GetPackGUID();
+            data << (uint32)0;                                  // moveEvent, NUM_PMOVE_EVTS = 0x39
+            if (mtype == MOVE_RUN)
+                data << uint8(0);                               // new 2.1.0
+            data << float(GetSpeed(mtype));
+            SendMessageToSet(&data, true);
         }
-        data << GetPackGUID();
-        data << (uint32)0;                                  // moveEvent, NUM_PMOVE_EVTS = 0x39
-        if (mtype == MOVE_RUN)
-            data << uint8(0);                               // new 2.1.0
-        data << float(GetSpeed(mtype));
-        SendMessageToSet(&data, true);
+        else
+        {
+            m_movementInfo.UpdateTime(WorldTimer::getMSTime());
+
+            WorldPacket data(SetSpeed2Opc_table[mtype][0], 64);
+            data << GetPackGUID();
+            data << m_movementInfo;
+            data << float(GetSpeed(mtype));
+            SendMessageToSet(&data, true);
+        }
     }
+
+    //CallForAllControlledUnits(SetSpeedRateHelper(mtype,forced), CONTROLLED_PET|CONTROLLED_GUARDIANS|CONTROLLED_CHARM|CONTROLLED_MINIPET);
+
 }
 
 void Unit::setDeathState(DeathState s)
@@ -11797,28 +11765,28 @@ void Unit::RemoveAurasAtChanneledTarget(SpellEntry const* spellInfo, Unit * cast
 
 void Unit::NearTeleportTo(float x, float y, float z, float orientation, bool casting /*= false*/ )
 {
+    DisableSpline();
+
     if (GetTypeId() == TYPEID_PLAYER)
         ((Player*)this)->TeleportTo(GetMapId(), x, y, z, orientation, TELE_TO_NOT_LEAVE_TRANSPORT | TELE_TO_NOT_LEAVE_COMBAT | TELE_TO_NOT_UNSUMMON_PET | (casting ? TELE_TO_SPELL : 0));
     else
     {
+        Creature* c = (Creature*)this;
+        // Creature relocation acts like instant movement generator, so current generator expects interrupt/reset calls to react properly
+        if (!c->GetMotionMaster()->empty())
+            if (MovementGenerator *movgen = c->GetMotionMaster()->top())
+                movgen->Interrupt(*c);
+
         GetMap()->CreatureRelocation(((Creature*)this), x, y, z, orientation);
 
         SendHeartBeat();
-    }
-}
 
-void Unit::BuildHeartBeatMsg(WorldPacket *data) const
-{
-    data->Initialize(MSG_MOVE_HEARTBEAT, 32);
-    *data << GetPackGUID();
-    //*data << uint32(((GetUnitMovementFlags() & MOVEFLAG_LEVITATING) || IsTaxiFlying())? (SPLINEFLAG_FLYING|SPLINEFLAG_WALKMODE) : GetUnitMovementFlags());
-    *data << uint8(0);                                      // 2.3.0
-    *data << uint32(WorldTimer::getMSTime());                           // time
-    *data << float(GetPositionX());
-    *data << float(GetPositionY());
-    *data << float(GetPositionZ());
-    *data << float(GetOrientation());
-    *data << uint32(0);
+        // finished relocation, movegen can different from top before creature relocation,
+        // but apply Reset expected to be safe in any case
+        if (!c->GetMotionMaster()->empty())
+            if (MovementGenerator *movgen = c->GetMotionMaster()->top())
+                movgen->Reset(*c);
+    }
 }
 
 /*-----------------------TRINITY-----------------------------*/
@@ -12242,13 +12210,6 @@ void Unit::SetRooted(bool apply)
     }
 }
 
-void Unit::SendMovementFlagUpdate()
-{
-    WorldPacket data;
-    BuildHeartBeatMsg(&data);
-    SendMessageToSet(&data, false);
-}
-
 void Unit::SetFeared(bool apply)
 {
     if (apply)
@@ -12663,7 +12624,7 @@ void Unit::KnockBackFrom(Unit* target, float horizintalSpeed, float verticalSpee
     // Effect propertly implemented only for players
     if (GetTypeId() == TYPEID_PLAYER)
     {
-        WorldPacket data(SMSG_MOVE_KNOCK_BACK, 8+4+4+4+4+4);
+        WorldPacket data(SMSG_MOVE_KNOCK_BACK, 9+4+4+4+4+4);
         data << GetPackGUID();
         data << uint32(0);                                  // Sequence
         data << float(vcos);                                // x direction
@@ -12676,8 +12637,10 @@ void Unit::KnockBackFrom(Unit* target, float horizintalSpeed, float verticalSpee
     }
     else
     {
-        float dis = horizintalSpeed;
+        float moveTimeHalf = verticalSpeed / Movement::gravity;
+        float max_height = -Movement::computeFallElevation(moveTimeHalf,false,-verticalSpeed);
 
+        float dis = 2 * moveTimeHalf * horizintalSpeed;
         float ox, oy, oz;
         GetPosition(ox, oy, oz);
 
@@ -12694,9 +12657,7 @@ void Unit::KnockBackFrom(Unit* target, float horizintalSpeed, float verticalSpee
             UpdateGroundPositionZ(fx, fy, fz);
         }
 
-        //FIXME: this mostly hack, must exist some packet for proper creature move at client side
-        //       with CreatureRelocation at server side
-        GetMap()->CreatureRelocation(((Creature*)this), fx, fy, fz, GetOrientation());
+        GetMotionMaster()->MoveJump(fx,fy,fz,horizintalSpeed,max_height);
     }
 }
 

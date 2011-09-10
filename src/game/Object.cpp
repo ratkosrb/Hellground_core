@@ -962,6 +962,45 @@ void WorldObject::_Create(uint32 guidlow, HighGuid guidhigh, uint32 mapid)
 
     m_mapId = mapid;
 }
+void WorldObject::Relocate(Position pos)
+{
+    m_positionX = pos.x;
+    m_positionY = pos.y;
+    m_positionZ = pos.z;
+    m_orientation = pos.o;
+
+    if(isType(TYPEMASK_UNIT))
+        ((Unit*)this)->m_movementInfo.ChangePosition(pos.x, pos.y, pos.z, orientation);
+}
+
+void WorldObject::Relocate(float x, float y, float z, float orientation)
+{
+    m_positionX = x;
+    m_positionY = y;
+    m_positionZ = z;
+    m_orientation = orientation;
+
+    if(isType(TYPEMASK_UNIT))
+        ((Unit*)this)->m_movementInfo.ChangePosition(x, y, z, orientation);
+}
+
+void WorldObject::Relocate(float x, float y, float z)
+{
+    m_positionX = x;
+    m_positionY = y;
+    m_positionZ = z;
+
+    if(isType(TYPEMASK_UNIT))
+        ((Unit*)this)->m_movementInfo.ChangePosition(x, y, z, GetOrientation());
+}
+
+void WorldObject::SetOrientation(float orientation)
+{
+    m_orientation = orientation;
+
+    if(isType(TYPEMASK_UNIT))
+        ((Unit*)this)->m_movementInfo.ChangeOrientation(orientation);
+}
 
 uint32 WorldObject::GetZoneId() const
 {

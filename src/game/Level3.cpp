@@ -6600,13 +6600,6 @@ bool ChatHandler::HandleCastBackCommand(const char* args)
     //if (!caster->hasUnitState(UNIT_STAT_CANNOT_TURN))
     caster->SetFacingToObject(m_session->GetPlayer());
 
-    //sky mod update
-    //WorldPacket data;
-    //caster->BuildHeartBeatMsg(&data);
-    //caster->SendMessageToSet(&data,true);
-
-    caster->SendMovementFlagUpdate();
-
     caster->CastSpell(m_session->GetPlayer(),spell,triggered);
 
     return true;
@@ -6692,12 +6685,6 @@ bool ChatHandler::HandleCastTargetCommand(const char* args)
 
     // update orientation at server
     caster->SetFacingToObject(m_session->GetPlayer());
-
-    // and client
-    WorldPacket data;
-    caster->BuildHeartBeatMsg(&data);
-    caster->SendMessageToSet(&data,true);
-
     caster->CastSpell(caster->getVictim(),spell,triggered);
 
     return true;

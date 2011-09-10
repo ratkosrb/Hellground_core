@@ -167,9 +167,6 @@ struct TRINITY_DLL_DECL npc_dancing_flamesAI : public ScriptedAI
         m_creature->Relocate(x,y,z + 0.94f);
         m_creature->SetLevitate(true);
         m_creature->HandleEmoteCommand(EMOTE_ONESHOT_DANCE);
-        WorldPacket data;                       //send update position to client
-        m_creature->BuildHeartBeatMsg(&data);
-        m_creature->SendMessageToSet(&data,true);
     }
 
     void UpdateAI(const uint32 diff)
@@ -200,9 +197,6 @@ bool ReceiveEmote_npc_dancing_flames( Player *player, Creature *flame, uint32 em
         flame->SetInFront(player);
         ((npc_dancing_flamesAI*)flame->AI())->active = false;
 
-        WorldPacket data;
-        flame->BuildHeartBeatMsg(&data);
-        flame->SendMessageToSet(&data,true);
         switch(emote)
         {
             case TEXTEMOTE_KISS:    flame->HandleEmoteCommand(EMOTE_ONESHOT_SHY); break;

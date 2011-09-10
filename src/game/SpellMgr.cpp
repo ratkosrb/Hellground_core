@@ -2623,13 +2623,12 @@ void SpellMgr::LoadSpellCustomAttr()
                 case SPELL_EFFECT_HEAL:
                     spellInfo->AttributesCu |= SPELL_ATTR_CU_DIRECT_DAMAGE;
                     break;
-                /*case SPELL_EFFECT_CHARGE:
+                case SPELL_EFFECT_CHARGE:
                 case SPELL_EFFECT_CHARGE2:
                     if (!spellInfo->speed && !spellInfo->SpellFamilyName)
-                        spellInfo->speed = SPEED_CHARGE;
+                        spellInfo->speed = 42.0f;
                     spellInfo->AttributesCu |= SPELL_ATTR_CU_CHARGE;
                     break;
-                    */
                 case SPELL_EFFECT_TRIGGER_SPELL:
                     if (IsPositionTarget(spellInfo->EffectImplicitTargetA[j]) ||
                         spellInfo->Targets & (TARGET_FLAG_SOURCE_LOCATION|TARGET_FLAG_DEST_LOCATION))

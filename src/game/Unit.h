@@ -267,7 +267,6 @@ class DynamicObject;
 class GameObject;
 class Item;
 class Pet;
-class Path;
 class PetAura;
 class UnitAI;
 
@@ -1360,14 +1359,12 @@ class TRINITY_DLL_SPEC Unit : public WorldObject
         void DisableSpline();
 
         void SendMonsterStop();
-        void SendMovementFlagUpdate();
 
         void SetInFront(Unit const* target);
         void SetFacingTo(float ori);
         void SetFacingToObject(WorldObject* pObject);
 
         void SendHeartBeat();
-        void BuildHeartBeatMsg(WorldPacket *data) const;
 
         virtual void MoveOutOfRange(Player &) {};
 

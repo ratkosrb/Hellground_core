@@ -479,3 +479,12 @@ void MotionMaster::MoveJump(float x, float y, float z, float horizontalSpeed, fl
     init.Launch();
     Mutate(new EffectMovementGenerator(id));
 }
+
+void MotionMaster::MoveCharge(float x, float y, float z)
+{
+    Movement::MoveSplineInit init(*m_owner);
+    init.MoveTo(x,y,z);
+    init.SetVelocity(42.0f);
+    init.Launch();
+    Mutate(new EffectMovementGenerator(EVENT_CHARGE));
+}
