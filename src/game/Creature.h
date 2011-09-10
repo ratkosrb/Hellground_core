@@ -453,9 +453,11 @@ class TRINITY_DLL_SPEC Creature : public Unit
         bool isRacialLeader() const { return GetCreatureInfo()->RacialLeader; }
         bool isCivilian() const { return GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_CIVILIAN; }
         bool isTrigger() const { return GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_TRIGGER; }
-        bool canWalk() const { return GetCreatureInfo()->InhabitType & INHABIT_GROUND; }
-        bool canSwim() const { return GetCreatureInfo()->InhabitType & INHABIT_WATER; }
-        bool canFly()  const { return GetCreatureInfo()->InhabitType & INHABIT_AIR; }
+
+        bool CanWalk() const { return GetCreatureInfo()->InhabitType & INHABIT_GROUND; }
+        bool CanSwim() const { return GetCreatureInfo()->InhabitType & INHABIT_WATER; }
+        bool CanFly()  const { return GetCreatureInfo()->InhabitType & INHABIT_AIR; }
+
         void SetReactState(ReactStates st) { m_reactState = st; }
         ReactStates GetReactState() { return m_reactState; }
         bool HasReactState(ReactStates state) const { return (m_reactState == state); }
@@ -491,8 +493,10 @@ class TRINITY_DLL_SPEC Creature : public Unit
 
         bool AIM_Initialize(CreatureAI* ai = NULL);
 
-        void AI_SendMoveToPacket(float x, float y, float z, uint32 time, uint32 MovementFlags, uint8 type);
         CreatureAI* AI() { return (CreatureAI*)i_AI; }
+
+        void SetWalk(bool enable);
+        void SetLevitate(bool enable);
 
         uint32 GetShieldBlockValue() const                  //dunno mob block value
         {

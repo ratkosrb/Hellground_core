@@ -599,7 +599,7 @@ inline bool CreatureAI::_EnterEvadeMode()
 
 inline void UnitAI::DoCast(Unit* victim, uint32 spellId, bool triggered)
 {
-    if (!victim || me->hasUnitState(UNIT_STAT_CASTING) && !triggered)
+    if (!victim || me->IsNonMeleeSpellCasted(false) && !triggered)
         return;
 
     me->CastSpell(victim, spellId, triggered);
@@ -612,7 +612,7 @@ inline void UnitAI::DoCastVictim(uint32 spellId, bool triggered)
 
 inline void UnitAI::DoCastAOE(uint32 spellId, bool triggered)
 {
-    if (!triggered && me->hasUnitState(UNIT_STAT_CASTING))
+    if (!triggered && me->IsNonMeleeSpellCasted(false))
         return;
 
     me->CastSpell((Unit*)NULL, spellId, triggered);
@@ -639,4 +639,3 @@ inline Creature *CreatureAI::DoSummonFlyer(uint32 uiEntry, WorldObject *obj, flo
 }
 
 #endif
-

@@ -506,18 +506,23 @@ void CreatureEventAI::ProcessAction(CreatureEventAI_Action const& action, uint32
                     if (!(action.cast.castFlags & (CAST_FORCE_TARGET_SELF | CAST_FORCE_CAST)) &&
                         !CanCast(target, tSpell, (action.cast.castFlags & CAST_TRIGGERED)))
                     {
-                        //Melee current victim if flag not set
+                        // Melee current victim if flag not set
                         if (!(action.cast.castFlags & CAST_NO_MELEE_IF_OOM))
                         {
-                            if (m_creature->GetMotionMaster()->GetCurrentMovementGeneratorType() == TARGETED_MOTION_TYPE)
+                            switch(m_creature->GetMotionMaster()->GetCurrentMovementGeneratorType())
                             {
-                                AttackDistance = 0.0f;
-                                AttackAngle = 0.0f;
+                                case CHASE_MOTION_TYPE:
+                                case FOLLOW_MOTION_TYPE:
+                                    AttackDistance = 0.0f;
+                                    AttackAngle = 0.0f;
 
-                                m_creature->GetMotionMaster()->MoveChase(m_creature->getVictim(), AttackDistance, AttackAngle);
+                                    m_creature->GetMotionMaster()->Clear(false);
+                                    m_creature->GetMotionMaster()->MoveChase(m_creature->getVictim(), AttackDistance, AttackAngle);
+                                    break;
+                                default:
+                                    break;
                             }
                         }
-
                     }
                     else
                     {
@@ -568,15 +573,21 @@ void CreatureEventAI::ProcessAction(CreatureEventAI_Action const& action, uint32
                     if (!(action.castguid.castFlags & (CAST_FORCE_TARGET_SELF | CAST_FORCE_CAST)) &&
                         !CanCast(target, tSpell, (action.castguid.castFlags & CAST_TRIGGERED)))
                     {
-                        //Melee current victim if flag not set
-                        if (!(action.castguid.castFlags & CAST_NO_MELEE_IF_OOM))
+                        // Melee current victim if flag not set
+                        if (!(action.cast.castFlags & CAST_NO_MELEE_IF_OOM))
                         {
-                            if (m_creature->GetMotionMaster()->GetCurrentMovementGeneratorType() == TARGETED_MOTION_TYPE)
+                            switch(m_creature->GetMotionMaster()->GetCurrentMovementGeneratorType())
                             {
-                                AttackDistance = 0.0f;
-                                AttackAngle = 0.0f;
+                                case CHASE_MOTION_TYPE:
+                                case FOLLOW_MOTION_TYPE:
+                                    AttackDistance = 0.0f;
+                                    AttackAngle = 0.0f;
 
-                                m_creature->GetMotionMaster()->MoveChase(m_creature->getVictim(), AttackDistance, AttackAngle);
+                                    m_creature->GetMotionMaster()->Clear(false);
+                                    m_creature->GetMotionMaster()->MoveChase(m_creature->getVictim(), AttackDistance, AttackAngle);
+                                    break;
+                                default:
+                                    break;
                             }
                         }
 

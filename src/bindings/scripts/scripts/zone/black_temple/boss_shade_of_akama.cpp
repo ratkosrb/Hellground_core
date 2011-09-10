@@ -193,7 +193,7 @@ struct TRINITY_DLL_DECL mob_ashtongue_defenderAI : public ScriptedAI
 
     void DoMeleeAttackIfReady()
     {
-        if (me->hasUnitState(UNIT_STAT_CASTING))
+        if (me->IsNonMeleeSpellCasted(false))
             return;
 
         //Make sure our attack is ready and we aren't currently casting before checking distance
@@ -226,7 +226,7 @@ struct TRINITY_DLL_DECL mob_ashtongue_defenderAI : public ScriptedAI
 
         if (m_shieldBashTimer < diff)
         {
-            if (m_creature->getVictim() && m_creature->getVictim()->hasUnitState(UNIT_STAT_CASTING))
+            if (m_creature->getVictim() && m_creature->getVictim()->IsNonMeleeSpellCasted(false))
             {
                 AddSpellToCast(m_creature->getVictim(), SPELL_SHIELD_BASH);
                 m_shieldBashTimer = 10000;
@@ -703,7 +703,7 @@ struct TRINITY_DLL_DECL boss_shade_of_akamaAI : public ScriptedAI
         if(Unit *owner = me->GetCharmerOrOwner())
         {
             me->GetMotionMaster()->Clear(false);
-            me->GetMotionMaster()->MoveFollow(owner, PET_FOLLOW_DIST, m_creature->GetFollowAngle(), MOTION_SLOT_ACTIVE);
+            me->GetMotionMaster()->MoveFollow(owner, PET_FOLLOW_DIST, m_creature->GetFollowAngle());
             Reset();
         }
         else
@@ -1063,8 +1063,8 @@ struct TRINITY_DLL_DECL boss_shade_of_akamaAI : public ScriptedAI
 
                 if (m_updateSpeed)
                 {
-                    if (me->GetUnitMovementFlags() & SPLINEFLAG_WALKMODE_MODE)
-                        me->RemoveUnitMovementFlag(SPLINEFLAG_WALKMODE_MODE);
+                    if (me->IsWalking())
+                        me->SetWalk(false);
 
                     me->UpdateSpeed(MOVE_RUN, true);
 
@@ -1340,7 +1340,7 @@ struct TRINITY_DLL_DECL npc_akamaAI : public ScriptedAI
                             if (broken)
                             {
                                 m_summons.Summon(broken);
-                                broken->AddUnitMovementFlag(SPLINEFLAG_WALKMODE_MODE);
+                                broken->SetWalk(true);
                                 broken->GetMotionMaster()->MovePoint(0, BrokenMoveTo[i][0], BrokenMoveTo[i][1], SPAWN_Z);
                                 broken->SetUInt32Value(UNIT_NPC_EMOTESTATE, EMOTE_STATE_KNEEL);
                             }

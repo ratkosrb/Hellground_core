@@ -409,7 +409,7 @@ struct TRINITY_DLL_DECL npc_isla_starmaneAI : public npc_escortAI
             m_creature->SetInFront(player); break;
         case 30: m_creature->HandleEmoteCommand(EMOTE_ONESHOT_WAVE); break;
         case 31: DoCast(m_creature, SPELL_CAT);
-            m_creature->RemoveUnitMovementFlag(SPLINEFLAG_WALKMODE_MODE); break;
+            m_creature->SetWalk(false); break;
         }
     }
 
@@ -1933,7 +1933,7 @@ struct TRINITY_DLL_DECL quest_the_vengeful_harbringerAI : public ScriptedAI
             return;
 
         visual_energy->CastSpell(visual_energy,46242,true); // Visual magic ball
-        visual_energy->SendMonsterMove(portal_trigger->GetPositionX(),portal_trigger->GetPositionY(),portal_trigger->GetPositionZ(),1500);
+        visual_energy->NearTeleportTo(portal_trigger->GetPositionX(),portal_trigger->GetPositionY(),portal_trigger->GetPositionZ(), portal_trigger->GetOrientation());
 
         std::list<Creature*> beam_visual_triggers = DoFindAllCreaturesWithEntry(21451, 30.0f);
         for (std::list<Creature*>::iterator itr = beam_visual_triggers.begin(); itr != beam_visual_triggers.end(); ++itr)
@@ -1972,7 +1972,7 @@ struct TRINITY_DLL_DECL quest_the_vengeful_harbringerAI : public ScriptedAI
                     return;
 
                 Dranei_Guardian->GetMotionMaster()->MovePoint(0,Defender_Trigger->GetPositionX(),Defender_Trigger->GetPositionY(),Defender_Trigger->GetPositionZ());
-                Dranei_Guardian->SendMonsterMove(Defender_Trigger->GetPositionX(),Defender_Trigger->GetPositionY(),Defender_Trigger->GetPositionZ(),6000); //we ned this to visual movement with delay
+                //Dranei_Guardian->SendMonsterMove(Defender_Trigger->GetPositionX(),Defender_Trigger->GetPositionY(),Defender_Trigger->GetPositionZ(),6000); //we ned this to visual movement with delay
             }
         }
         else
@@ -2178,7 +2178,7 @@ struct npc_akunoAI : public npc_escortAI
 
     void JustSummoned(Creature* pSummoned)
     {
-        pSummoned->RemoveUnitMovementFlag(SPLINEFLAG_WALKMODE_MODE);
+        pSummoned->SetWalk(false);
         pSummoned->GetMotionMaster()->MovePoint(0, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ());
         pSummoned->AI()->AttackStart(me);
     }

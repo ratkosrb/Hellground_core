@@ -48,6 +48,7 @@
 
 #include "TemporarySummon.h"
 #include "OutdoorPvPMgr.h"
+#include "movement/packet_builder.h"
 
 uint32 GuidHigh2TypeId(uint32 guid_hi)
 {
@@ -259,45 +260,29 @@ void Object::DestroyForPlayer(Player *target) const
 
 void Object::BuildMovementUpdate(ByteBuffer * data, uint8 updateFlags) const
 {
-    uint32 moveFlags = MOVEFLAG_NONE;
-
     *data << uint8(updateFlags);                            // update flags
 
+    // 0x20
     if (updateFlags & UPDATEFLAG_LIVING)
     {
-        switch (GetTypeId())
+        Unit *unit = ((Unit*)this);
+        if (GetTypeId() == TYPEID_PLAYER)
         {
-            case TYPEID_UNIT:
-            {
-                moveFlags = ((Unit*)this)->GetUnitMovementFlags();
-                moveFlags &= ~MOVEFLAG_ONTRANSPORT;
-                moveFlags &= ~MOVEFLAG_SPLINE_ENABLED;
-            }
-            break;
-            case TYPEID_PLAYER:
-            {
-                moveFlags = ((Player*)this)->GetUnitMovementFlags();
-
-                if (((Player*)this)->GetTransport())
-                    moveFlags |= MOVEFLAG_ONTRANSPORT;
-                else
-                    moveFlags &= ~MOVEFLAG_ONTRANSPORT;
-
-                // remove unknown, unused etc flags for now
-                moveFlags &= ~MOVEFLAG_SPLINE_ENABLED;          // will be set manually
-
-                if (((Player*)this)->isInFlight())
-                {
-                    WPAssert(((Player*)this)->GetMotionMaster()->GetCurrentMovementGeneratorType() == FLIGHT_MOTION_TYPE);
-                    moveFlags = (MOVEFLAG_FORWARD | MOVEFLAG_SPLINE_ENABLED);
-                }
-            }
-            break;
+            Player *player = ((Player*)unit);
+            if(player->GetTransport())
+                player->m_movementInfo.AddMovementFlag(MOVEFLAG_ONTRANSPORT);
+            else
+                player->m_movementInfo.RemoveMovementFlag(MOVEFLAG_ONTRANSPORT);
         }
 
-        *data << uint32(moveFlags);                            // movement flags
-        *data << uint8(0);                                  // movemoveFlags
-        *data << uint32(WorldTimer::getMSTime());                       // time (in milliseconds)
+        // Update movement info time
+        unit->m_movementInfo.UpdateTime(WorldTimer::getMSTime());
+        // Write movement info
+        //unit->m_movementInfo.Write(*data);
+
+        *data << uint32(unit->m_movementInfo.GetMovementFlags());                    // movement flags
+        *data << uint8(unit->m_movementInfo.GetMovementFlags2());                    // movemoveFlags
+        *data << uint32(WorldTimer::getMSTime());                                    // time (in milliseconds)
     }
 
     // 0x40
@@ -323,140 +308,22 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint8 updateFlags) const
     // 0x20
     if (updateFlags & UPDATEFLAG_LIVING)
     {
-        // 0x00000200
-        if (moveFlags & MOVEFLAG_ONTRANSPORT)
-        {
-            if (GetTypeId() == TYPEID_PLAYER)
-            {
-                *data << (uint64)((Player*)this)->GetTransport()->GetGUID();
-                *data << (float)((Player*)this)->GetTransOffsetX();
-                *data << (float)((Player*)this)->GetTransOffsetY();
-                *data << (float)((Player*)this)->GetTransOffsetZ();
-                *data << (float)((Player*)this)->GetTransOffsetO();
-                *data << (uint32)((Player*)this)->GetTransTime();
-            }
-            //TrinIty currently not have support for other than player on transport
-        }
-
-        // 0x02200000
-        if (moveFlags & (MOVEFLAG_SWIMMING | SPLINEFLAG_FLYINGING2))
-        {
-            if (GetTypeId() == TYPEID_PLAYER)
-                *data << (float)((Player*)this)->m_movementInfo.s_pitch;
-            else
-                *data << float(0);                          // is't part of movement packet, we must store and send it...
-        }
-
-        if (GetTypeId() == TYPEID_PLAYER)
-            *data << (uint32)((Player*)this)->m_movementInfo.GetFallTime();
-        else
-            *data << uint32(0);                             // last fall time
-
-        // 0x00001000
-        if (moveFlags & MOVEFLAG_FALLING)
-        {
-            if (GetTypeId() == TYPEID_PLAYER)
-            {
-                *data << float(((Player*)this)->m_movementInfo.j_velocity);
-                *data << float(((Player*)this)->m_movementInfo.j_sinAngle);
-                *data << float(((Player*)this)->m_movementInfo.j_cosAngle);
-                *data << float(((Player*)this)->m_movementInfo.j_xyspeed);
-            }
-            else
-            {
-                *data << float(0);
-                *data << float(0);
-                *data << float(0);
-                *data << float(0);
-            }
-        }
-
-        // 0x04000000
-        if (moveFlags & MOVEFLAG_SPLINE_ELEVATION)
-        {
-            if (GetTypeId() == TYPEID_PLAYER)
-                *data << float(((Player*)this)->m_movementInfo.u_unk1);
-            else
-                *data << float(0);
-        }
+        Unit *unit = ((Unit*)this);
+        unit->m_movementInfo.Write(*data, false);
 
         // Unit speeds
-        *data << ((Unit*)this)->GetSpeed(MOVE_WALK);
-        *data << ((Unit*)this)->GetSpeed(MOVE_RUN);
-        *data << ((Unit*)this)->GetSpeed(MOVE_SWIM_BACK);
-        *data << ((Unit*)this)->GetSpeed(MOVE_SWIM);
-        *data << ((Unit*)this)->GetSpeed(MOVE_RUN_BACK);
-        *data << ((Unit*)this)->GetSpeed(MOVE_FLIGHT);
-        *data << ((Unit*)this)->GetSpeed(MOVE_FLIGHT_BACK);
-        *data << ((Unit*)this)->GetSpeed(MOVE_TURN_RATE);
+        *data << float(unit->GetSpeed(MOVE_WALK));
+        *data << float(unit->GetSpeed(MOVE_RUN));
+        *data << float(unit->GetSpeed(MOVE_SWIM_BACK));
+        *data << float(unit->GetSpeed(MOVE_SWIM));
+        *data << float(unit->GetSpeed(MOVE_RUN_BACK));
+        *data << float(unit->GetSpeed(MOVE_FLIGHT));
+        *data << float(unit->GetSpeed(MOVE_FLIGHT_BACK));
+        *data << float(unit->GetSpeed(MOVE_TURN_RATE));
 
         // 0x08000000
-        if (moveFlags & MOVEFLAG_SPLINE_ENABLED)
-        {
-            if (GetTypeId() != TYPEID_PLAYER)
-            {
-                sLog.outDebug("BuildMovementUpdate: MOVEFLAG_SPLINE_ENABLED for non-player");
-                return;
-            }
-
-            if (!((Player*)this)->isInFlight())
-            {
-                sLog.outDebug("BuildMovementUpdate: MOVEFLAG_SPLINE_ENABLED but not in flight");
-                return;
-            }
-
-            WPAssert(((Player*)this)->GetMotionMaster()->GetCurrentMovementGeneratorType() == FLIGHT_MOTION_TYPE);
-
-            FlightPathMovementGenerator *fmg = (FlightPathMovementGenerator*)(((Player*)this)->GetMotionMaster()->top());
-
-            uint32 flags3 = 0x00000300;
-
-            *data << uint32(flags3);                        // splines flag?
-
-            if (flags3 & 0x10000)                            // probably x,y,z coords there
-            {
-                *data << (float)0;
-                *data << (float)0;
-                *data << (float)0;
-            }
-
-            if (flags3 & 0x20000)                            // probably guid there
-            {
-                *data << uint64(0);
-            }
-
-            if (flags3 & 0x40000)                            // may be orientation
-            {
-                *data << (float)0;
-            }
-
-            Path &path = fmg->GetPath();
-
-            float x, y, z;
-            ((Player*)this)->GetPosition(x, y, z);
-
-            uint32 inflighttime = uint32(path.GetPassedLength(fmg->GetCurrentNode(), x, y, z) * 32);
-            uint32 traveltime = uint32(path.GetTotalLength() * 32);
-
-            *data << uint32(inflighttime);                  // passed move time?
-            *data << uint32(traveltime);                    // full move time?
-            *data << uint32(0);                             // ticks count?
-
-            uint32 poscount = uint32(path.Size());
-
-            *data << uint32(poscount);                      // points count
-
-            for (uint32 i = 0; i < poscount; ++i)
-            {
-                *data << float(path.GetNodes()[i].x);
-                *data << float(path.GetNodes()[i].y);
-                *data << float(path.GetNodes()[i].z);
-            }
-
-            *data << float(path.GetNodes()[poscount-1].x);
-            *data << float(path.GetNodes()[poscount-1].y);
-            *data << float(path.GetNodes()[poscount-1].z);
-        }
+        if (unit->m_movementInfo.GetMovementFlags() & MOVEFLAG_SPLINE_ENABLED)
+            Movement::PacketBuilder::WriteCreate(*unit->movespline, *data);
     }
 
     // 0x8
@@ -507,9 +374,12 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint8 updateFlags) const
     }
 
     // 0x4
-    if (updateFlags & UPDATEFLAG_HAS_ATTACKING_TARGET)
+    if (updateFlags & UPDATEFLAG_HAS_ATTACKING_TARGET)       // packed guid (current target guid)
     {
-        *data << uint8(0);                                  // packed guid (probably target guid)
+        if (((Unit*)this)->getVictim())
+            *data << ((Unit*)this)->getVictim()->GetPackGUID();
+        else
+            data->appendPackGUID(0);
     }
 
     // 0x2
@@ -1384,9 +1254,9 @@ void WorldObject::UpdateAllowedPositionZ(float x, float y, float &z) const
         {
             // non fly unit don't must be in air
             // non swim unit must be at ground (mostly speedup, because it don't must be in water and water level check less fast
-            if (!((Creature const*)this)->canFly())
+            if (!((Creature const*)this)->CanFly())
             {
-                bool CanSwim = ((Creature const*)this)->canSwim();
+                bool CanSwim = ((Creature const*)this)->CanSwim();
                 float ground_z = z;
                 float max_z = CanSwim
                     ? GetBaseMap()->GetWaterOrGroundLevel(x, y, z, &ground_z, !((Unit const*)this)->HasAuraType(SPELL_AURA_WATER_WALK))

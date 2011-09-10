@@ -6408,7 +6408,8 @@ bool ChatHandler::HandleMovegensCommand(const char* /*args*/)
 
     PSendSysMessage(LANG_MOVEGENS_LIST,(unit->GetTypeId()==TYPEID_PLAYER ? "Player" : "Creature"),unit->GetGUIDLow());
 
-    MotionMaster* mm = unit->GetMotionMaster();
+    // If u need IT, fix it ;p
+    /*MotionMaster* mm = unit->GetMotionMaster();
     for (int i = 0; i < MAX_MOTION_SLOT; ++i)
     {
         MovementGenerator* mg = mm->GetMotionSlot(i);
@@ -6422,7 +6423,6 @@ bool ChatHandler::HandleMovegensCommand(const char* /*args*/)
             case IDLE_MOTION_TYPE:          SendSysMessage(LANG_MOVEGENS_IDLE);          break;
             case RANDOM_MOTION_TYPE:        SendSysMessage(LANG_MOVEGENS_RANDOM);        break;
             case WAYPOINT_MOTION_TYPE:      SendSysMessage(LANG_MOVEGENS_WAYPOINT);      break;
-            case ANIMAL_RANDOM_MOTION_TYPE: SendSysMessage(LANG_MOVEGENS_ANIMAL_RANDOM); break;
             case CONFUSED_MOTION_TYPE:      SendSysMessage(LANG_MOVEGENS_CONFUSED);      break;
             case TARGETED_MOTION_TYPE:
             {
@@ -6470,7 +6470,7 @@ bool ChatHandler::HandleMovegensCommand(const char* /*args*/)
                 PSendSysMessage(LANG_MOVEGENS_UNKNOWN,mg->GetMovementGeneratorType());
                 break;
         }
-    }
+    }*/
     return true;
 }
 
@@ -6597,8 +6597,8 @@ bool ChatHandler::HandleCastBackCommand(const char* args)
     bool triggered = (trig_str != NULL);
 
     // update orientation at server
-    if (!caster->hasUnitState(UNIT_STAT_CANNOT_TURN))
-        caster->SetOrientation(caster->GetAngle(m_session->GetPlayer()));
+    //if (!caster->hasUnitState(UNIT_STAT_CANNOT_TURN))
+    caster->SetFacingToObject(m_session->GetPlayer());
 
     //sky mod update
     //WorldPacket data;
@@ -6691,8 +6691,7 @@ bool ChatHandler::HandleCastTargetCommand(const char* args)
     bool triggered = (trig_str != NULL);
 
     // update orientation at server
-    if (!caster->hasUnitState(UNIT_STAT_CANNOT_TURN))
-        caster->SetOrientation(caster->GetAngle(m_session->GetPlayer()));
+    caster->SetFacingToObject(m_session->GetPlayer());
 
     // and client
     WorldPacket data;
@@ -6711,23 +6710,13 @@ when attempting to use the PointMovementGenerator
 */
 bool ChatHandler::HandleComeToMeCommand(const char *args)
 {
-    char* newFlagStr = strtok((char*)args, " ");
-
-    if (!newFlagStr)
-        return false;
-
-    uint32 newFlags = (uint32)strtoul(newFlagStr, NULL, 0);
-
     Creature* caster = getSelectedCreature();
     if (!caster)
     {
-        m_session->GetPlayer()->SetUnitMovementFlags(newFlags);
         SendSysMessage(LANG_SELECT_CREATURE);
         SetSentErrorMessage(true);
         return false;
     }
-
-    caster->SetUnitMovementFlags(newFlags);
 
     Player* pl = m_session->GetPlayer();
 

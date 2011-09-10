@@ -39,7 +39,7 @@ void UnitAI::AttackStartCaster(Unit *victim, float dist)
 
 void UnitAI::DoMeleeAttackIfReady()
 {
-    if (me->hasUnitState(UNIT_STAT_CASTING))
+    if (me->IsNonMeleeSpellCasted(false))
         return;
 
     //Make sure our attack is ready and we aren't currently casting before checking distance
@@ -65,7 +65,7 @@ void UnitAI::DoMeleeAttackIfReady()
 
 bool UnitAI::DoSpellAttackIfReady(uint32 spell)
 {
-    if (me->hasUnitState(UNIT_STAT_CASTING))
+    if (me->IsNonMeleeSpellCasted(false))
         return true;
 
     if (me->isAttackReady())
@@ -365,7 +365,7 @@ Unit* UnitAI::SelectUnit(AttackingTarget target, uint32 position)
 bool UnitAI::CanCast(Unit* Target, SpellEntry const *Spell, bool Triggered)
 {
     //No target so we can't cast
-    if (!Target || !Spell || me->hasUnitState(UNIT_STAT_CASTING))
+    if (!Target || !Spell || me->IsNonMeleeSpellCasted(false))
         return false;
 
     //Silenced so we can't cast

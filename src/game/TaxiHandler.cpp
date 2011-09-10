@@ -30,7 +30,6 @@
 #include "UpdateMask.h"
 #include "Path.h"
 #include "WaypointMovementGenerator.h"
-#include "DestinationHolderImp.h"
 
 #include <cassert>
 
@@ -218,14 +217,14 @@ void WorldSession::HandleTaxiNextDestinationOpcode(WorldPacket& recv_data)
     {
         if (GetPlayer()->GetMotionMaster()->GetCurrentMovementGeneratorType()==FLIGHT_MOTION_TYPE)
         {
-            // short preparations to continue flight
+            /*/ short preparations to continue flight
             FlightPathMovementGenerator* flight = (FlightPathMovementGenerator*)(GetPlayer()->GetMotionMaster()->top());
 
             flight->SetCurrentNodeAfterTeleport();
-            Path::PathNode const& node = flight->GetPath()[flight->GetCurrentNode()];
+            //Path::PathNode const& node = flight->GetPath()[flight->GetCurrentNode()];
             flight->SkipCurrentNode();
 
-            GetPlayer()->TeleportTo(curDestNode->map_id,node.x,node.y,node.z,GetPlayer()->GetOrientation());
+            GetPlayer()->TeleportTo(curDestNode->map_id,node.x,node.y,node.z,GetPlayer()->GetOrientation());*/
         }
         return;
     }

@@ -1694,7 +1694,7 @@ void Aura::TriggerSpell()
                             }
                         }
 
-                        if (!caster->HasUnitMovementFlag(MOVEFLAG_FALLINGFAR))
+                        if (!caster->m_movementInfo.HasMovementFlag(MOVEFLAG_FALLINGFAR))
                         {
                             if (height < 55 && height > 50)
                             {
@@ -3819,7 +3819,7 @@ void Aura::HandleFeignDeath(bool apply, bool Real)
 
         for (std::list<Unit*>::iterator iter = targets.begin(); iter != targets.end(); ++iter)
         {
-            if (!(*iter)->hasUnitState(UNIT_STAT_CASTING))
+            if (!(*iter)->IsNonMeleeSpellCasted(false))
                 continue;
 
             for (uint32 i = CURRENT_FIRST_NON_MELEE_SPELL; i < CURRENT_MAX_SPELL; i++)
@@ -4762,8 +4762,8 @@ void Aura::HandlePeriodicTriggerSpell(bool apply, bool Real)
             }
             case 43648: // Electrical Storm makes target levitating
             {
-                if (m_target->HasUnitMovementFlag(MOVEFLAG_LEVITATING))
-                    m_target->RemoveUnitMovementFlag(MOVEFLAG_LEVITATING);
+                if (m_target->m_movementInfo.HasMovementFlag(MOVEFLAG_LEVITATING))
+                    m_target->m_movementInfo.RemoveMovementFlag(MOVEFLAG_LEVITATING);
                 break;
             }
             case 40106: // Merge
@@ -4815,8 +4815,8 @@ void Aura::HandlePeriodicTriggerSpell(bool apply, bool Real)
             }
             case 43648: // Electrical Storm - stop levitating when spell ends
             {
-                if (!m_target->HasUnitMovementFlag(MOVEFLAG_LEVITATING))
-                    m_target->SetUnitMovementFlags(MOVEFLAG_LEVITATING);
+                if (!m_target->m_movementInfo.HasMovementFlag(MOVEFLAG_LEVITATING))
+                    m_target->m_movementInfo.SetMovementFlags(MOVEFLAG_LEVITATING);
                 break;
             }
         }
@@ -6345,9 +6345,6 @@ void Aura::HandleAuraAllowFlight(bool apply, bool Real)
     // all applied/removed only at real aura add/remove
     if (!Real)
         return;
-
-    if (m_target->GetTypeId() == TYPEID_UNIT)
-        m_target->SetFlying(apply);
 
     // allow fly
     WorldPacket data;

@@ -113,10 +113,10 @@ inline void CreatureUnitRelocationWorker(Creature* c, Unit* u)
         return;
 
     // hacky exception for Sunblade Lookout, Shattered Sun Bombardier and Brutallus
-    if (u->isInFlight() && c->GetEntry() != 25132 && c->GetEntry() != 25144 && c->GetEntry() != 25158)
+    if (u->IsTaxiFlying() && c->GetEntry() != 25132 && c->GetEntry() != 25144 && c->GetEntry() != 25158)
         return;
 
-    if (c->HasReactState(REACT_AGGRESSIVE) && !c->hasUnitState(UNIT_STAT_SIGHTLESS))
+    if (c->HasReactState(REACT_AGGRESSIVE))
         if (c->_IsWithinDist(u, DEFAULT_VISIBILITY_DISTANCE, true) && c->IsAIEnabled)
             c->AI()->MoveInLineOfSight_Safe(u);
 }
@@ -248,7 +248,7 @@ void AIRelocationNotifier::Visit(CreatureMapType &m)
 
 void DynamicObjectUpdater::VisitHelper(Unit* target)
 {
-    if (!target->isAlive() || target->isInFlight())
+    if (!target->isAlive() || target->IsTaxiFlying())
         return;
 
     if (target->GetTypeId() == TYPEID_UNIT && ((Creature*)target)->isTotem())
@@ -385,7 +385,7 @@ void Deliverer::SendPacket(Player* plr)
         return;
 
     // Don't send the packet to possesor if not supposed to
-    if (!i_toPossessor && plr->isPossessing() && plr->GetCharmGUID() == i_source.GetGUID())
+    if (!i_toPossessor && plr->GetCharmGUID() == i_source.GetGUID())
         return;
 
     if (plr_list.find(plr->GetGUID()) == plr_list.end())

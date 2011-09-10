@@ -186,7 +186,7 @@ void ScriptedAI::CastNextSpellIfAnyAndReady(uint32 diff)
 
     bool casted = false;
 
-    if (m_creature->hasUnitState(UNIT_STAT_CASTING))
+    if (me->IsNonMeleeSpellCasted(false))
         casted = true;
 
     if (!spellList.empty() && !casted)
@@ -294,7 +294,7 @@ void ScriptedAI::CastNextSpellIfAnyAndReady(uint32 diff)
 
 void ScriptedAI::DoCast(Unit* victim, uint32 spellId, bool triggered)
 {
-    if (/*!victim || */m_creature->hasUnitState(UNIT_STAT_CASTING) && !triggered)
+    if (/*!victim || */me->IsNonMeleeSpellCasted(false) && !triggered)
         return;
 
     //m_creature->StopMoving();
@@ -303,7 +303,7 @@ void ScriptedAI::DoCast(Unit* victim, uint32 spellId, bool triggered)
 
 void ScriptedAI::DoCastAOE(uint32 spellId, bool triggered)
 {
-    if(!triggered && m_creature->hasUnitState(UNIT_STAT_CASTING))
+    if(!triggered && me->IsNonMeleeSpellCasted(false))
         return;
 
     m_creature->CastSpell((Unit*)NULL, spellId, triggered);
@@ -1029,8 +1029,8 @@ void ScriptedAI::DoModifyThreatPercent(Unit *pUnit, int32 pct)
 
 void ScriptedAI::DoTeleportTo(float x, float y, float z, uint32 time)
 {
-    m_creature->Relocate(x,y,z);
-    m_creature->SendMonsterMove(x, y, z, time);
+    m_creature->NearTeleportTo(x,y,z, me->GetOrientation());
+    //m_creature->SendMonsterMove(x, y, z, time);
 }
 
 void ScriptedAI::DoTeleportPlayer(Unit* pUnit, float x, float y, float z, float o)

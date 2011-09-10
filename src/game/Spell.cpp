@@ -2809,7 +2809,7 @@ void Spell::update(uint32 difftime)
     // check if caster has moved before the spell finished
     if (m_timer != 0 &&
         (m_castPositionX != m_caster->GetPositionX() || m_castPositionY != m_caster->GetPositionY() || m_castPositionZ != m_caster->GetPositionZ()) &&
-        (m_spellInfo->Effect[0] != SPELL_EFFECT_STUCK || !m_caster->HasUnitMovementFlag(MOVEFLAG_FALLINGFAR)))
+        (m_spellInfo->Effect[0] != SPELL_EFFECT_STUCK || !m_caster->m_movementInfo.HasMovementFlag(MOVEFLAG_FALLINGFAR)))
     {
         if (!IsNextMeleeSwingSpell() && !IsAutoRepeat() && !m_IsTriggeredSpell && (m_spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_MOVEMENT))
             cancel();
@@ -2837,7 +2837,7 @@ void Spell::update(uint32 difftime)
                 if (m_caster->GetTypeId() == TYPEID_PLAYER)
                 {
                     // check if player has jumped before the channeling finished
-                    if (m_caster->HasUnitMovementFlag(MOVEFLAG_FALLING))
+                    if (m_caster->m_movementInfo.HasMovementFlag(MOVEFLAG_FALLING))
                         cancel();
                 }
 
@@ -2923,9 +2923,6 @@ void Spell::finish(bool ok)
 
     if (IsChanneledSpell(m_spellInfo))
         m_caster->UpdateInterruptMask();
-
-    if (!m_caster->IsNonMeleeSpellCasted(false, false, true))
-        m_caster->clearUnitState(UNIT_STAT_CASTING);
 
     if (!ok)
     {
@@ -3700,7 +3697,7 @@ uint8 Spell::CanCast(bool strict)
     if (m_caster->GetTypeId()==TYPEID_PLAYER && ((Player*)m_caster)->isMoving())
     {
         // skip stuck spell to allow use it in falling case and apply spell limitations at movement
-        if ((!m_caster->HasUnitMovementFlag(MOVEFLAG_FALLINGFAR) || m_spellInfo->Effect[0] != SPELL_EFFECT_STUCK) &&
+        if ((!m_caster->m_movementInfo.HasMovementFlag(MOVEFLAG_FALLINGFAR) || m_spellInfo->Effect[0] != SPELL_EFFECT_STUCK) &&
             (IsAutoRepeat() || (m_spellInfo->AuraInterruptFlags & AURA_INTERRUPT_FLAG_NOT_SEATED) != 0))
             return SPELL_FAILED_MOVING;
     }
@@ -3733,7 +3730,7 @@ uint8 Spell::CanCast(bool strict)
                 return SPELL_FAILED_TARGET_AURASTATE;
 
             // Not allow players casting on flying player
-            if (target->isInFlight() && m_caster->GetTypeId() == TYPEID_PLAYER)
+            if (target->IsTaxiFlying() && m_caster->GetTypeId() == TYPEID_PLAYER)
                 return SPELL_FAILED_BAD_TARGETS;
 
             if (!m_IsTriggeredSpell && !(m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_IGNORE_LOS) && VMAP::VMapFactory::checkSpellForLoS(m_spellInfo->Id) && !m_caster->IsWithinLOSInMap(target))
@@ -3889,7 +3886,7 @@ uint8 Spell::CanCast(bool strict)
     if (m_caster->IsMounted() && m_caster->GetTypeId()==TYPEID_PLAYER && !m_IsTriggeredSpell &&
         !IsPassiveSpell(m_spellInfo->Id) && !(m_spellInfo->Attributes & SPELL_ATTR_CASTABLE_WHILE_MOUNTED))
     {
-        if (m_caster->isInFlight())
+        if (m_caster->IsTaxiFlying())
             return SPELL_FAILED_NOT_FLYING;
         else
             return SPELL_FAILED_NOT_MOUNTED;

@@ -86,7 +86,7 @@ struct TRINITY_DLL_DECL boss_the_lurker_belowAI : public Scripted_NoMovementAI
         }
 
         // Do not fall to the ground ;]
-        me->AddUnitMovementFlag(MOVEFLAG_SWIMMING | MOVEFLAG_LEVITATING);
+        me->SetLevitate(true);
 
         // Set reactstate to: Aggresive
         me->SetReactState(REACT_AGGRESSIVE);
@@ -155,7 +155,7 @@ struct TRINITY_DLL_DECL boss_the_lurker_belowAI : public Scripted_NoMovementAI
     void MovementInform(uint32 type, uint32 data)
     {
         // data: 0 = FINALIZE
-        // data: 1 = UPDATE
+        /*/ data: 1 = UPDATE
         if (type == ROTATE_MOTION_TYPE)
         {
             if (data == 1) //Rotate movegen update
@@ -180,9 +180,9 @@ struct TRINITY_DLL_DECL boss_the_lurker_belowAI : public Scripted_NoMovementAI
                             m_immunemap[pPlayer->GetGUID()]++;
                             continue;
                         }
-                    }
+                    }    
 
-                    if (/*pPlayer->IsInWater() ||*/ pPlayer->GetPositionZ() < -19.9645)
+                    if (/*pPlayer->IsInWater() || pPlayer->GetPositionZ() < -19.9645)
                         continue;
 
                     if (me->GetDistance2d(pPlayer) > 100.0f)
@@ -208,12 +208,12 @@ struct TRINITY_DLL_DECL boss_the_lurker_belowAI : public Scripted_NoMovementAI
                 me->SetReactState(REACT_AGGRESSIVE);
                 m_rotating = false;
             }
-        }
+        } */
     }
 
     void DoMeleeAttackIfReady()
     {
-        if (me->hasUnitState(UNIT_STAT_CASTING))
+        if (me->IsNonMeleeSpellCasted(false))
             return;
 
         //Make sure our attack is ready and we aren't currently casting before checking distance
@@ -318,7 +318,7 @@ struct TRINITY_DLL_DECL boss_the_lurker_belowAI : public Scripted_NoMovementAI
                 }
 
                 me->SetSelection(0);
-                me->GetMotionMaster()->MoveRotate(20000, RAND(ROTATE_DIRECTION_LEFT, ROTATE_DIRECTION_RIGHT));
+                //me->GetMotionMaster()->MoveRotate(20000, RAND(ROTATE_DIRECTION_LEFT, ROTATE_DIRECTION_RIGHT));
 
                 ForceSpellCast(me, SPELL_SPOUT_VISUAL, INTERRUPT_AND_CAST_INSTANTLY);
 

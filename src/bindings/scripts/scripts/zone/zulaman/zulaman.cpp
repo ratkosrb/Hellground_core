@@ -432,7 +432,7 @@ struct TRINITY_DLL_DECL npc_ashliAI : public ScriptedAI
                 CheckTimer -= diff;
         }
 
-        if(Fire && !m_creature->hasUnitState(UNIT_STAT_CASTING))
+        if(Fire && !m_creature->IsNonMeleeSpellCasted(false))
         {
             Unit *target = NULL;
             if(!targets.empty())

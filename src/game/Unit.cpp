@@ -46,14 +46,15 @@
 #include "InstanceSaveMgr.h"
 #include "GridNotifiersImpl.h"
 #include "CellImpl.h"
-#include "Path.h"
 #include "CreatureGroups.h"
 #include "PetAI.h"
 #include "PassiveAI.h"
 #include "CreatureAI.h"
 #include "VMapFactory.h"
-#include "Traveller.h"
 #include "UnitAI.h"
+
+#include "movement/MoveSplineInit.h"
+#include "movement/MoveSpline.h"
 
 #include <math.h>
 
@@ -172,33 +173,40 @@ void MovementInfo::Read(ByteBuffer &data)
         data >> t_pos.z;
         data >> t_pos.o;
         data >> t_time;
+
+        if (moveFlags2 & MOVEFLAG2_INTERP_MOVEMENT)
+            data >> t_time2;
     }
 
-    if (HasMovementFlag(MovementFlags(MOVEFLAG_SWIMMING | SPLINEFLAG_FLYINGING2)))
+    if ((HasMovementFlag(MovementFlags(MOVEFLAG_SWIMMING | MOVEFLAG_FLYING))) || (moveFlags2 & MOVEFLAG2_ALLOW_PITCHING))
         data >> s_pitch;
 
     data >> fallTime;
+
     if (HasMovementFlag(MOVEFLAG_FALLING))
     {
-        data >> j_velocity;
-        data >> j_sinAngle;
-        data >> j_cosAngle;
-        data >> j_xyspeed;
+        data >> jump.velocity;
+        data >> jump.sinAngle;
+        data >> jump.cosAngle;
+        data >> jump.xyspeed;
     }
 
     if (HasMovementFlag(MOVEFLAG_SPLINE_ELEVATION))
         data >> u_unk1;
 }
 
-void MovementInfo::Write(ByteBuffer &data) const
+void MovementInfo::Write(ByteBuffer &data, bool full) const
 {
-    data << moveFlags;
-    data << moveFlags2;
-    data << time;
-    data << pos.x;
-    data << pos.y;
-    data << pos.z;
-    data << pos.o;
+    if (full)
+    {
+        data << moveFlags;
+        data << moveFlags2;
+        data << time;
+        data << pos.x;
+        data << pos.y;
+        data << pos.z;
+        data << pos.o;
+    }
 
     if (HasMovementFlag(MOVEFLAG_ONTRANSPORT))
     {
@@ -208,28 +216,35 @@ void MovementInfo::Write(ByteBuffer &data) const
         data << t_pos.z;
         data << t_pos.o;
         data << t_time;
+
+        if(moveFlags2 & MOVEFLAG2_INTERP_MOVEMENT)
+            data << t_time2;
     }
 
-    if (HasMovementFlag(MovementFlags(MOVEFLAG_SWIMMING | SPLINEFLAG_FLYINGING2)))
+    if ((HasMovementFlag(MovementFlags(MOVEFLAG_SWIMMING | MOVEFLAG_FLYING))) || (moveFlags2 & MOVEFLAG2_ALLOW_PITCHING))
+    {
         data << s_pitch;
+    }
 
     data << fallTime;
 
     if (HasMovementFlag(MOVEFLAG_FALLING))
     {
-        data << j_velocity;
-        data << j_sinAngle;
-        data << j_cosAngle;
-        data << j_xyspeed;
+        data << jump.velocity;
+        data << jump.sinAngle;
+        data << jump.cosAngle;
+        data << jump.xyspeed;
     }
 
     if (HasMovementFlag(MOVEFLAG_SPLINE_ELEVATION))
+    {
         data << u_unk1;
+    }
 }
 
 Unit::Unit()
 : WorldObject(), i_motionMaster(this), m_ThreatManager(this), m_HostilRefManager(this)
-, IsAIEnabled(false), NeedChangeAI(false)
+, IsAIEnabled(false), NeedChangeAI(false), movespline(new Movement::MoveSpline())
 , i_AI(NULL), i_disabledAI(NULL), m_procDeep(0), m_AI_locked(false), m_removedAurasCount(0)
 {
     m_modAuras = new AuraList[TOTAL_AURAS];
@@ -318,7 +333,6 @@ Unit::Unit()
     }
 
     m_charmInfo = NULL;
-    m_unit_movement_flags = 0;
     m_reducedThreatPercent = 0;
     m_misdirectionTargetGUID = 0;
 
@@ -366,11 +380,8 @@ Unit::~Unit()
     RemoveAllDynObjects();
     _DeleteAuras();
 
-    if (m_charmInfo)
-    {
-        delete m_charmInfo;
-        m_charmInfo = NULL;
-    }
+    delete m_charmInfo;
+    delete movespline;
 
     for (int i = 0; i < TOTAL_AURAS; i++)
     {
@@ -431,6 +442,7 @@ void Unit::Update(uint32 update_diff, uint32 p_time)
     ModifyAuraState(AURA_STATE_HEALTHLESS_20_PERCENT, GetHealth() < GetMaxHealth()*0.20f);
     ModifyAuraState(AURA_STATE_HEALTHLESS_35_PERCENT, GetHealth() < GetMaxHealth()*0.35f);
 
+    UpdateSplineMovement(p_time);
     i_motionMaster.UpdateMotion(p_time);
 }
 
@@ -442,32 +454,6 @@ bool Unit::haveOffhandWeapon() const
         return m_canDualWield;
 }
 
-void Unit::SendMonsterMoveWithSpeedToCurrentDestination(Player* player)
-{
-    float x, y, z;
-    if (!IsStopped() && GetMotionMaster()->GetDestination(x, y, z))
-        SendMonsterMoveWithSpeed(x, y, z, 0, player);
-}
-
-void Unit::SendMonsterMoveWithSpeed(float x, float y, float z, uint32 transitTime, Player* player)
-{
-    if (!transitTime)
-    {
-        if (GetTypeId() == TYPEID_PLAYER)
-        {
-            Traveller<Player> traveller(*(Player*)this);
-            transitTime = traveller.GetTotalTrevelTimeTo(x,y,z);
-        }
-        else
-        {
-            Traveller<Creature> traveller(*(Creature*)this);
-            transitTime = traveller.GetTotalTrevelTimeTo(x,y,z);
-        }
-    }
-    //float orientation = (float)atan2((double)dy, (double)dx);
-    SendMonsterMove(x, y, z, transitTime, player);
-}
-
 void Unit::SendMonsterStop()
 {
     WorldPacket data(SMSG_MONSTER_MOVE, (17 + GetPackGUID().size()));
@@ -476,87 +462,6 @@ void Unit::SendMonsterStop()
     data << WorldTimer::getMSTime();
     data << uint8(1);
     SendMessageToSet(&data, true);
-
-    clearUnitState(UNIT_STAT_MOVE);
-}
-
-void Unit::SendMonsterMove(float NewPosX, float NewPosY, float NewPosZ, uint32 Time, Player* player)
-{
-    WorldPacket data(SMSG_MONSTER_MOVE, (41 + GetPackGUID().size()));
-    data << GetPackGUID();
-
-    data << GetPositionX() << GetPositionY() << GetPositionZ();
-    data << WorldTimer::getMSTime();
-
-    data << uint8(0);
-    data << uint32((GetUnitMovementFlags() & MOVEFLAG_LEVITATING) ? SPLINEFLAG_FLYING : SPLINEFLAG_WALKMODE);
-
-    data << Time;                                           // Time in between points
-    data << uint32(1);                                      // 1 single waypoint
-    data << NewPosX << NewPosY << NewPosZ;                  // the single waypoint Point B
-
-    if (player)
-        player->GetSession()->SendPacket(&data);
-    else
-        SendMessageToSet(&data, true);
-
-    addUnitState(UNIT_STAT_MOVE);
-}
-
-void Unit::SendMonsterMove(float NewPosX, float NewPosY, float NewPosZ, uint32 MoveFlags, uint32 time, float speedZ, Player *player)
-{
-    WorldPacket data(SMSG_MONSTER_MOVE, 12+4+1+4+4+4+12+GetPackGUID().size());
-    data << GetPackGUID();
-
-    data << uint8(0);                                       // new in 3.1
-    data << GetPositionX() << GetPositionY() << GetPositionZ();
-    data << WorldTimer::getMSTime();
-
-    data << uint8(0);
-    data << MoveFlags;
-
-    if (MoveFlags & SPLINEFLAG_JUMP)
-    {
-        data << time;
-        data << speedZ;
-        data << (uint32)0; // walk time after jump
-    }
-    else
-        data << time;
-
-    data << uint32(1);                                      // 1 single waypoint
-    data << NewPosX << NewPosY << NewPosZ;                  // the single waypoint Point B
-
-    if (player)
-        player->GetSession()->SendPacket(&data);
-    else
-        SendMessageToSet(&data, true);
-}
-
-void Unit::SendMonsterMoveByPath(Path const& path, uint32 start, uint32 end)
-{
-    uint32 traveltime = uint32(path.GetTotalLength(start, end) * 32);
-
-    uint32 pathSize = end-start;
-
-    WorldPacket data(SMSG_MONSTER_MOVE, (GetPackGUID().size()+4+4+4+4+1+4+4+4+pathSize*4*3));
-    data << GetPackGUID();
-    data << GetPositionX();
-    data << GetPositionY();
-    data << GetPositionZ();
-
-    data << uint32(WorldTimer::getMSTime());
-
-    data << uint8(0);
-    data << uint32(((GetUnitMovementFlags() & MOVEFLAG_LEVITATING) || isInFlight())? (SPLINEFLAG_FLYING|SPLINEFLAG_WALKMODE) : SPLINEFLAG_WALKMODE);
-    data << uint32(traveltime);
-    data << uint32(pathSize);
-    data.append((char*)path.GetNodes(start), pathSize * 4 * 3);
-
-    //WPAssert(data.size() == 37 + pathnodes.Size() * 4 * 3);
-    SendMessageToSet(&data, true);
-
-    addUnitState(UNIT_STAT_MOVE);
 }
 
 void Unit::resetAttackTimer(WeaponAttackType type)
@@ -807,7 +712,7 @@ bool SpellCantDealDmgToPlayer(uint32 id)
 uint32 Unit::DealDamage(DamageLog *damageInfo, DamageEffectType damagetype, const SpellEntry *spellProto, bool durabilityLoss)
 {
     Unit *pVictim = damageInfo->target;
-    if (!pVictim->isAlive() || pVictim->isInFlight() || pVictim->GetTypeId() == TYPEID_UNIT && ((Creature*)pVictim)->IsInEvadeMode() || pVictim->HasAura(27827, 2))
+    if (!pVictim->isAlive() || pVictim->IsTaxiFlying() || pVictim->GetTypeId() == TYPEID_UNIT && ((Creature*)pVictim)->IsInEvadeMode() || pVictim->HasAura(27827, 2))
         return 0;
 
     //You don't lose health from damage taken from another player while in a sanctuary
@@ -1478,7 +1383,7 @@ void Unit::DealSpellDamage(SpellDamageLog *damageInfo, bool durabilityLoss)
     if (!this || !pVictim)
         return;
 
-    if (!pVictim->isAlive() || pVictim->isInFlight() || pVictim->GetTypeId() == TYPEID_UNIT && ((Creature*)pVictim)->IsInEvadeMode())
+    if (!pVictim->isAlive() || pVictim->IsTaxiFlying() || pVictim->GetTypeId() == TYPEID_UNIT && ((Creature*)pVictim)->IsInEvadeMode())
         return;
 
     SpellEntry const *spellProto = sSpellStore.LookupEntry(damageInfo->spell_id);
@@ -1601,7 +1506,7 @@ void Unit::DealMeleeDamage(MeleeDamageLog *damageInfo, bool durabilityLoss)
     if (!this || !pVictim)
         return;
 
-    if (!pVictim->isAlive() || pVictim->isInFlight() || pVictim->GetTypeId() == TYPEID_UNIT && ((Creature*)pVictim)->IsInEvadeMode())
+    if (!pVictim->isAlive() || pVictim->IsTaxiFlying() || pVictim->GetTypeId() == TYPEID_UNIT && ((Creature*)pVictim)->IsInEvadeMode())
         return;
 
     //You don't lose health from damage taken from another player while in a sanctuary
@@ -2117,7 +2022,7 @@ bool Unit::CalcBinaryResist(Unit *pVictim, SpellSchoolMask schoolMask) {
 
 void Unit::AttackerStateUpdate (Unit *pVictim, WeaponAttackType attType, bool extra)
 {
-    if (!extra && hasUnitState(UNIT_STAT_CANNOT_AUTOATTACK) || HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PACIFIED))
+    if (!extra || HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PACIFIED))
         return;
 
     if (!pVictim->isAlive())
@@ -3234,7 +3139,6 @@ void Unit::SetCurrentCastedSpell(Spell * pSpell)
                     InterruptSpell(CURRENT_AUTOREPEAT_SPELL);
                 m_AutoRepeatFirstCast = true;
             }
-            addUnitState(UNIT_STAT_CASTING);
         } break;
 
         case CURRENT_CHANNELED_SPELL:
@@ -3247,7 +3151,6 @@ void Unit::SetCurrentCastedSpell(Spell * pSpell)
             if (m_currentSpells[CURRENT_AUTOREPEAT_SPELL] &&
                 m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->m_spellInfo->Category == 351)
                 InterruptSpell(CURRENT_AUTOREPEAT_SPELL);
-            addUnitState(UNIT_STAT_CASTING);
         } break;
 
         case CURRENT_AUTOREPEAT_SPELL:
@@ -3376,21 +3279,22 @@ bool Unit::isInFront(GameObject const* target, float distance,  float arc) const
 
 void Unit::SetInFront(Unit const* target)
 {
-    // update orientation at server
-    if (!hasUnitState(UNIT_STAT_CANNOT_TURN))
-        SetOrientation(GetAngle(target));
+    SetOrientation(GetAngle(target));
+}
+
+void Unit::SetFacingTo(float ori)
+{
+    Movement::MoveSplineInit init(*this);
+    init.SetFacing(ori);
+    init.Launch();
 }
 
 void Unit::SetFacingToObject(WorldObject* pObject)
 {
-    // update orientation at server
-    if (!hasUnitState(UNIT_STAT_CANNOT_TURN))
-        SetOrientation(GetAngle(pObject));
+    if (!IsStopped())
+        return;
 
-    // and client
-    WorldPacket data;
-    BuildHeartBeatMsg(&data);
-    SendMessageToSet(&data, false);
+    SetFacingTo(GetAngle(pObject));
 }
 
 bool Unit::isInBack(Unit const* target, float distance, float arc) const
@@ -3447,9 +3351,9 @@ bool Unit::isBetween(WorldObject *s, WorldObject *e, float offset) const
 bool Unit::isInAccessiblePlacefor (Creature const* c) const
 {
     if (IsInWater())
-        return c->canSwim();
+        return c->CanSwim();
     else
-        return c->canWalk() || c->canFly();
+        return c->CanWalk() || c->CanFly();
 }
 
 bool Unit::IsInWater() const
@@ -9180,7 +9084,7 @@ bool Unit::isAttackableByAOE() const
     if (GetTypeId()==TYPEID_PLAYER && ((Player *)this)->isGameMaster())
         return false;
 
-    return !isInFlight();
+    return !IsTaxiFlying();
 }
 
 int32 Unit::ModifyHealth(int32 dVal)
@@ -9630,7 +9534,10 @@ void Unit::setDeathState(DeathState s)
     {
         RemoveAllAurasOnDeath();
         UnsummonAllTotems();
+
         StopMoving();
+        DisableSpline();
+
         ModifyAuraState(AURA_STATE_HEALTHLESS_20_PERCENT, false);
         ModifyAuraState(AURA_STATE_HEALTHLESS_35_PERCENT, false);
         // remove aurastates allowing special moves
@@ -11313,14 +11220,9 @@ void Unit::StopMoving()
     if (!IsInWorld())
         return;
 
-    Relocate(GetPositionX(), GetPositionY(),GetPositionZ());
-
-    SendMonsterStop();
-
-    // update position and orientation;
-    WorldPacket data;
-    BuildHeartBeatMsg(&data);
-    SendMessageToSet(&data,false);
+    Movement::MoveSplineInit init(*this);
+    init.SetFacing(GetOrientation());
+    init.Launch();
 }
 
 bool Unit::IsSitState() const
@@ -11901,9 +11803,7 @@ void Unit::NearTeleportTo(float x, float y, float z, float orientation, bool cas
     {
         GetMap()->CreatureRelocation(((Creature*)this), x, y, z, orientation);
 
-        WorldPacket data;
-        BuildHeartBeatMsg(&data);
-        SendMessageToSet(&data, false);
+        SendHeartBeat();
     }
 }
 
@@ -11911,7 +11811,7 @@ void Unit::BuildHeartBeatMsg(WorldPacket *data) const
 {
     data->Initialize(MSG_MOVE_HEARTBEAT, 32);
     *data << GetPackGUID();
-    *data << uint32(((GetUnitMovementFlags() & MOVEFLAG_LEVITATING) || isInFlight())? (SPLINEFLAG_FLYING|SPLINEFLAG_WALKMODE) : GetUnitMovementFlags());
+    //*data << uint32(((GetUnitMovementFlags() & MOVEFLAG_LEVITATING) || IsTaxiFlying())? (SPLINEFLAG_FLYING|SPLINEFLAG_WALKMODE) : GetUnitMovementFlags());
     *data << uint8(0);                                      // 2.3.0
     *data << uint32(WorldTimer::getMSTime());                           // time
     *data << float(GetPositionX());
@@ -12279,7 +12179,7 @@ void Unit::SetStunned(bool apply)
         if (GetTypeId() != TYPEID_PLAYER)
             ((Creature*)this)->StopMoving();
         else
-            SetUnitMovementFlags(0);    //Clear movement flags
+            m_movementInfo.SetMovementFlags(MOVEFLAG_NONE);    //Clear movement flags
 
         WorldPacket data(SMSG_FORCE_MOVE_ROOT, 8);
         data << GetPackGUID();
@@ -12315,7 +12215,7 @@ void Unit::SetRooted(bool apply)
 
         if (GetTypeId() == TYPEID_PLAYER)
         {
-            SetUnitMovementFlags(0);
+            m_movementInfo.SetMovementFlags(MOVEFLAG_NONE);
 
             WorldPacket data(SMSG_FORCE_MOVE_ROOT, 10);
             data << GetPackGUID();
@@ -12379,20 +12279,6 @@ void Unit::SetFeared(bool apply)
         ((Player*)this)->SetClientControl(this, !apply);
 }
 
-void Unit::SetFlying(bool apply)
-{
-    if (apply)
-    {
-        SetByteFlag(UNIT_FIELD_BYTES_1, 3, 0x02);
-        AddUnitMovementFlag(SPLINEFLAG_FLYINGING + SPLINEFLAG_FLYINGING2);
-    }
-    else
-    {
-        RemoveByteFlag(UNIT_FIELD_BYTES_1, 3, 0x02);
-        RemoveUnitMovementFlag(SPLINEFLAG_FLYINGING + SPLINEFLAG_FLYINGING2);
-    }
-}
-
 void Unit::SetConfused(bool apply)
 {
     if (apply)
@@ -12419,13 +12305,15 @@ void Unit::SetCharmedOrPossessedBy(Unit* charmer, bool possess)
     if (this == charmer)
         return;
 
-    if (isInFlight())
+    if (IsTaxiFlying())
         return;
 
     if (GetTypeId() == TYPEID_PLAYER && ((Player*)this)->GetTransport())
         return;
 
-    RemoveUnitMovementFlag(SPLINEFLAG_WALKMODE_MODE);
+    if (GetTypeId() == TYPEID_UNIT)
+        ((Creature*)this)->SetWalk(false);
+
     CastStop();
     CombatStop(); //TODO: CombatStop(true) may cause crash (interrupt spells)
     DeleteThreatList();
@@ -12478,7 +12366,6 @@ void Unit::SetCharmedOrPossessedBy(Unit* charmer, bool possess)
     //Set possessed
     if (possess)
     {
-        addUnitState(UNIT_STAT_POSSESSED);
         SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
         AddPlayerToVision((Player*)charmer);
         ((Player*)charmer)->SetViewport(GetGUID(), true);
@@ -12518,7 +12405,7 @@ void Unit::RemoveCharmedOrPossessedBy(Unit *charmer)
     else if (charmer != GetCharmer()) // one aura overrides another?
         return;
 
-    bool possess = hasUnitState(UNIT_STAT_POSSESSED);
+    bool possess = isPossessed();
 
     CastStop();
     CombatStop(); //TODO: CombatStop(true) may cause crash (interrupt spells)
@@ -12526,13 +12413,12 @@ void Unit::RemoveCharmedOrPossessedBy(Unit *charmer)
     DeleteThreatList();
     SetCharmerGUID(0);
     RestoreFaction();
-    GetMotionMaster()->InitDefault();
+
+    // Will work as needed /?
+    GetMotionMaster()->Initialize();
 
     if (possess)
-    {
-        clearUnitState(UNIT_STAT_POSSESSED);
         RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
-    }
 
     if (GetTypeId() == TYPEID_UNIT)
     {
@@ -12871,4 +12757,55 @@ Unit* Unit::GetNextRandomRaidMember(float radius)
 
     uint32 randTarget = GetMap()->urand(0,nearMembers.size()-1);
     return nearMembers[randTarget];
+}
+
+void Unit::MonsterMoveWithSpeed(float x, float y, float z, float speed)
+{
+    Movement::MoveSplineInit init(*this);
+    init.MoveTo(x,y,z);
+    init.SetVelocity(speed);
+    init.Launch();
+}
+
+void Unit::UpdateSplineMovement(uint32 t_diff)
+{
+    enum{
+        POSITION_UPDATE_DELAY = 400,
+    };
+
+    if (movespline->Finalized())
+        return;
+
+    movespline->updateState(t_diff);
+    bool arrived = movespline->Finalized();
+
+    if (arrived)
+        DisableSpline();
+
+    m_movesplineTimer.Update(t_diff);
+    if (m_movesplineTimer.Passed() || arrived)
+    {
+        m_movesplineTimer.Reset(POSITION_UPDATE_DELAY);
+        Movement::Location loc = movespline->ComputePosition();
+
+        if (GetTypeId() == TYPEID_PLAYER)
+            ((Player*)this)->SetPosition(loc.x,loc.y,loc.z,loc.orientation);
+        else
+            GetMap()->CreatureRelocation((Creature*)this,loc.x,loc.y,loc.z,loc.orientation);
+    }
+}
+
+void Unit::DisableSpline()
+{
+    m_movementInfo.RemoveMovementFlag(MovementFlags(MOVEFLAG_SPLINE_ENABLED|MOVEFLAG_FORWARD));
+    movespline->_Interrupt();
+}
+
+void Unit::SendHeartBeat()
+{
+    m_movementInfo.UpdateTime(WorldTimer::getMSTime());
+    WorldPacket data(MSG_MOVE_HEARTBEAT, 64);
+    data << GetPackGUID();
+    data << m_movementInfo;
+    SendMessageToSet(&data, true);
 }

@@ -99,7 +99,7 @@ struct TRINITY_DLL_DECL boss_talon_king_ikissAI : public ScriptedAI
                 DoScriptText(SAY_INTRO, m_creature);
             }
 
-            if (!m_creature->canFly() && m_creature->GetDistanceZ(who) > CREATURE_Z_ATTACK_RANGE)
+            if (!m_creature->CanFly() && m_creature->GetDistanceZ(who) > CREATURE_Z_ATTACK_RANGE)
                 return;
 
             float attackRadius = m_creature->GetAttackDistance(who);
@@ -194,8 +194,7 @@ struct TRINITY_DLL_DECL boss_talon_king_ikissAI : public ScriptedAI
                 //Spell doesn't work, but we use for visual effect at least
                 DoCast(target,SPELL_BLINK);
 
-                m_creature->Relocate(wLoc.coord_x,wLoc.coord_y,wLoc.coord_z);
-                m_creature->SendMonsterMove(wLoc.coord_x,wLoc.coord_y,wLoc.coord_z, 0);
+                m_creature->NearTeleportTo(wLoc.coord_x,wLoc.coord_y,wLoc.coord_z, 0.0f);
 
                 DoCast(target,SPELL_BLINK_TELEPORT);
                 Blink = true;

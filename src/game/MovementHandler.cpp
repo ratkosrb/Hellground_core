@@ -218,7 +218,7 @@ void WorldSession::HandleMovementOpcodes(WorldPacket & recv_data)
             pPlayer->m_AC_NoFall_count ++;
             // falltime = 357 <--- WEH  No Fall Damage Cheat
             sLog.outCheat("Player %s (GUID: %u / ACCOUNT_ID: %u) - possible no fall damage cheat. MapId: %u, falltime: %u, coords old: %f, %f, %f,coords new: %f, %f, %f. MOVEMENTFLAGS: %u LATENCY: %u. BG/Arena: %s",
-                       pPlayer->GetName(), pPlayer->GetGUIDLow(), pPlayer->GetSession()->GetAccountId(), pPlayer->GetMapId(), oldMovementInfo.GetFallTime(), oldMovementInfo.pos.x, oldMovementInfo.pos.y, oldMovementInfo.pos.z, movementInfo.pos.x, movementInfo.pos.y, movementInfo.pos.z, movementInfo.pos.z, movementInfo.GetMovementFlags(), m_latency, pPlayer->GetMap() ? (pPlayer->GetMap()->IsBattleGroundOrArena() ? "Yes" : "No") : "No");
+                       pPlayer->GetName(), pPlayer->GetGUIDLow(), pPlayer->GetSession()->GetAccountId(), pPlayer->GetMapId(), oldMovementInfo.GetFallTime(), oldMovementInfo.GetPos()->x, oldMovementInfo.GetPos()->y, oldMovementInfo.GetPos()->z, movementInfo.GetPos()->x, movementInfo.GetPos()->y, movementInfo.GetPos()->z, movementInfo.GetMovementFlags(), m_latency, pPlayer->GetMap() ? (pPlayer->GetMap()->IsBattleGroundOrArena() ? "Yes" : "No") : "No");
 
             //pPlayer->Kill(pPlayer, true);
             if (!(pPlayer->m_AC_NoFall_count % 5))
@@ -263,7 +263,7 @@ void WorldSession::HandleMovementOpcodes(WorldPacket & recv_data)
 */
 
     //Save movement flags
-    pPlayer->SetUnitMovementFlags(movementInfo.GetMovementFlags());
+    pPlayer->m_movementInfo.SetMovementFlags(movementInfo.GetMovementFlags());
 
     /* handle special cases */
     if (movementInfo.HasMovementFlag(MOVEFLAG_ONTRANSPORT))
@@ -287,7 +287,7 @@ void WorldSession::HandleMovementOpcodes(WorldPacket & recv_data)
             // elevators also cause the client to send MOVEFLAG_ONTRANSPORT - just unmount if the guid can be found in the transport list
             for (MapManager::TransportSet::iterator iter = sMapMgr.m_Transports.begin(); iter != sMapMgr.m_Transports.end(); ++iter)
             {
-                if ((*iter)->GetGUID() == movementInfo.t_guid)
+                if ((*iter)->GetGUID() == movementInfo.GetTransportGuid())
                 {
                     // unmount before boarding
                     pPlayer->RemoveSpellsCausingAura(SPELL_AURA_MOUNTED);
@@ -307,7 +307,7 @@ void WorldSession::HandleMovementOpcodes(WorldPacket & recv_data)
     }
 
     // fall damage generation (ignore in flight case that can be triggered also at lags in moment teleportation to another map).
-    if (recv_data.GetOpcode() == MSG_MOVE_FALL_LAND && !pPlayer->isInFlight())
+    if (recv_data.GetOpcode() == MSG_MOVE_FALL_LAND && !pPlayer->IsTaxiFlying())
         pPlayer->HandleFallDamage(movementInfo);
 
     if (movementInfo.HasMovementFlag(MOVEFLAG_SWIMMING) != pPlayer->IsInWater())
@@ -345,7 +345,7 @@ void WorldSession::HandleMovementOpcodes(WorldPacket & recv_data)
     if (pPlayer->isMoving())
         pPlayer->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_MOVE | AURA_INTERRUPT_FLAG_NOT_SEATED);
 
-    if (pPlayer->isTurning())
+    if (pPlayer->isMovingOrTurning())
         pPlayer->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TURNING | AURA_INTERRUPT_FLAG_NOT_SEATED);
 
     if (movementInfo.GetPos()->z < -500.0f)
@@ -363,7 +363,7 @@ void WorldSession::HandlePossessedMovement(WorldPacket& recv_data, MovementInfo&
         return;
 
     //Save movement flags
-    pos_unit->SetUnitMovementFlags(movementInfo.GetMovementFlags());
+    pos_unit->m_movementInfo.SetMovementFlags(movementInfo.GetMovementFlags());
 
     // Remove possession if possessed unit enters a transport
     if (movementInfo.HasMovementFlag(MOVEFLAG_ONTRANSPORT))
@@ -396,7 +396,7 @@ void WorldSession::HandlePossessedMovement(WorldPacket& recv_data, MovementInfo&
         plr->SetPosition(movementInfo.GetPos()->x, movementInfo.GetPos()->y, movementInfo.GetPos()->z, movementInfo.GetPos()->o, false);
         plr->m_movementInfo = movementInfo;
 
-        if (plr->isTurning())
+        if (plr->isMovingOrTurning())
             plr->RemoveSpellsCausingAura(SPELL_AURA_FEIGN_DEATH);
 
         if (movementInfo.GetPos()->z < -500.0f)
@@ -531,7 +531,7 @@ void WorldSession::HandleMoveKnockBackAck(WorldPacket & recv_data)
         return;
 
     // Save movement flags
-    _player->SetUnitMovementFlags(movementInfo.GetMovementFlags());
+    _player->m_movementInfo.SetMovementFlags(movementInfo.GetMovementFlags());
 
     // skip not personal message;
     GetPlayer()->m_movementInfo = movementInfo;

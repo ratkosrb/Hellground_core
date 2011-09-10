@@ -269,7 +269,7 @@ void PetAI::UpdateAI(const uint32 diff)
     if (!me->GetCharmInfo())
         return;
 
-    if (!m_creature->hasUnitState(UNIT_STAT_CASTING))
+    if (!me->IsNonMeleeSpellCasted(false))
     {
         //Autocast
         for (uint8 i = 0; i < m_creature->GetPetAutoSpellSize(); i++)
@@ -394,7 +394,7 @@ void ImpAI::UpdateAI(const uint32 diff)
     if (!me->GetCharmInfo())
         return;
 
-    if (!m_creature->hasUnitState(UNIT_STAT_CASTING))
+    if (!me->IsNonMeleeSpellCasted(false))
     {
         //Autocast
         for (uint8 i = 0; i < m_creature->GetPetAutoSpellSize(); i++)

@@ -216,7 +216,8 @@ void CreatureGroup::FormationReset(bool dismiss)
                 if (dismiss)
                     mem->GetMotionMaster()->Initialize();
                 else
-                    mem->GetMotionMaster()->MoveIdle(MOTION_SLOT_IDLE);
+                    mem->GetMotionMaster()->MoveIdle();
+
                 sLog.outDebug("Set %s movement for member GUID: %u", dismiss ? "default" : "idle", mem->GetGUIDLow());
             }
         }
@@ -254,14 +255,14 @@ void CreatureGroup::LeaderMoveTo(float x, float y, float z)
         member->UpdateGroundPositionZ(dx, dy, dz);
 
         if (member->GetDistance(m_leader) < dist + MAX_DESYNC)
-            member->SetUnitMovementFlags(m_leader->GetUnitMovementFlags());
+            member->m_movementInfo.SetMovementFlags(m_leader->m_movementInfo.GetMovementFlags());
         else
         {
             // jak sie za bardzo rozjada xO
             if (member->GetDistance(m_leader) > 40.0f)
                 member->Relocate(m_leader->GetPositionX(), m_leader->GetPositionY(), m_leader->GetPositionZ(), 0.0f);
             else
-                member->RemoveUnitMovementFlag(SPLINEFLAG_WALKMODE_MODE);
+                member->SetWalk(false);
         }
 
         member->GetMotionMaster()->MovePoint(0, dx, dy, dz);

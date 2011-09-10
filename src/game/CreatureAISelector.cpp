@@ -55,7 +55,7 @@ namespace FactorySelector
                 ai_factory = ai_registry.GetRegistryItem("PetAI");
             else if (creature->isGuard())
                 ai_factory = ai_registry.GetRegistryItem("GuardAI");
-            else if (creature->isPet() || (creature->isCharmed() && !creature->isPossessed()))
+            else if (creature->isPet() || (creature->isCharmed() && !creature->HasAuraType(SPELL_AURA_MOD_POSSESS))) // MOD_POSSESS - dunno it work :p
             {
                 switch (creature->GetEntry())
                 {

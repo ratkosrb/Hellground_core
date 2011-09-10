@@ -52,6 +52,9 @@
     <Filter Include="Warden">
       <UniqueIdentifier>{8944d8f8-adfe-406e-aeae-235e04130e1b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Movement">
+      <UniqueIdentifier>{ce30d0aa-dd1b-4030-b7eb-2695053e3691}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\game\Channel.cpp">
@@ -91,9 +94,6 @@
       <Filter>Objects</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\game\CreatureGroups.cpp">
-      <Filter>Objects</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\game\DestinationHolder.cpp">
       <Filter>Objects</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\game\DynamicObject.cpp">
@@ -493,6 +493,21 @@
     <ClCompile Include="..\..\src\game\WardenWin.cpp">
       <Filter>Warden</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\game\movement\MoveSpline.cpp">
+      <Filter>Movement</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\game\movement\MoveSplineInit.cpp">
+      <Filter>Movement</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\game\movement\packet_builder.cpp">
+      <Filter>Movement</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\game\movement\spline.cpp">
+      <Filter>Movement</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\game\movement\util.cpp">
+      <Filter>Movement</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\game\Channel.h">
@@ -532,12 +547,6 @@
       <Filter>Objects</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\game\CreatureGroups.h">
-      <Filter>Objects</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\game\DestinationHolder.h">
-      <Filter>Objects</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\game\DestinationHolderImp.h">
       <Filter>Objects</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\game\DynamicObject.h">
@@ -762,9 +771,6 @@
     <ClInclude Include="..\..\src\game\PlayerAI.h">
       <Filter>Artificial Intelligence\PlayerAI</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\game\AnimalRandomMovementGenerator.h">
-      <Filter>Movement Generators</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\game\ConfusedMovementGenerator.h">
       <Filter>Movement Generators</Filter>
     </ClInclude>
@@ -921,6 +927,30 @@
     </ClInclude>
     <ClInclude Include="..\..\src\game\WardenWin.h">
       <Filter>Warden</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\game\movement\MoveSpline.h">
+      <Filter>Movement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\game\movement\MoveSplineFlag.h">
+      <Filter>Movement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\game\movement\MoveSplineInit.h">
+      <Filter>Movement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\game\movement\MoveSplineInitArgs.h">
+      <Filter>Movement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\game\movement\packet_builder.h">
+      <Filter>Movement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\game\movement\spline.h">
+      <Filter>Movement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\game\movement\spline.impl.h">
+      <Filter>Movement</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\game\movement\typedefs.h">
+      <Filter>Movement</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

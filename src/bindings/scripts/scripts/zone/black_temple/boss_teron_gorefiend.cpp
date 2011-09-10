@@ -84,7 +84,7 @@ struct TRINITY_DLL_DECL mob_doom_blossomAI : public NullCreatureAI
             m_creature->setFaction(Teron->getFaction());
         m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
         m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
-        m_creature->AddUnitMovementFlag(MOVEFLAG_ONTRANSPORT | MOVEFLAG_LEVITATING);
+        m_creature->SetLevitate(true);
 
         float newX, newY, newZ;
         m_creature->GetRandomPoint(m_creature->GetPositionX(),m_creature->GetPositionY(),m_creature->GetPositionZ(), 10.0, newX, newY, newZ);
@@ -392,7 +392,7 @@ struct TRINITY_DLL_DECL boss_teron_gorefiendAI : public ScriptedAI
 
     void SpellHit(Unit* caster, const SpellEntry* spell)    // Ghosts spells cant be applied on Teron
     {
-        if(caster->GetTypeId() == TYPEID_UNIT && caster->isPossessedByPlayer())
+        if(caster->GetTypeId() == TYPEID_UNIT && caster->GetCharmerOrOwner())
             m_creature->RemoveAurasByCasterSpell(spell->Id, caster->GetGUID());
 
     }

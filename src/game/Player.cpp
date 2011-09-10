@@ -435,9 +435,6 @@ Player::Player (WorldSession *session): Unit()
     m_summon_y = 0.0f;
     m_summon_z = 0.0f;
 
-    //Default movement to run mode
-    m_unit_movement_flags = 0;
-
     m_miniPet = 0;
     m_bgAfkReportedTimer = 0;
     m_contestedPvPTimer = 0;
@@ -1218,7 +1215,7 @@ void Player::Update(uint32 update_diff, uint32 p_time)
         }
     }
 
-    if (hasUnitState(UNIT_STAT_MELEE_ATTACKING) && !hasUnitState(UNIT_STAT_CASTING))
+    if (hasUnitState(UNIT_STAT_MELEE_ATTACKING) && !IsNonMeleeSpellCasted(false))
     {
         if (Unit *pVictim = getVictim())
         {
@@ -1723,7 +1720,8 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
     }
 
     // reset movement flags at teleport, because player will continue move with these flags after teleport
-    SetUnitMovementFlags(0);
+    m_movementInfo.SetMovementFlags(MOVEFLAG_NONE);
+    DisableSpline();
 
     if ((GetMapId() == mapid) && (!m_transport))
     {
@@ -2160,7 +2158,7 @@ bool Player::CanInteractWithNPCs(bool alive) const
 {
     if (alive && !isAlive())
         return false;
-    if (isInFlight())
+    if (IsTaxiFlying())
         return false;
 
     return true;
@@ -5643,7 +5641,7 @@ void Player::CheckAreaExploreAndOutdoor()
     if (!isAlive())
         return;
 
-    if (isInFlight())
+    if (IsTaxiFlying())
         return;
 
     bool isOutdoor;
@@ -6811,7 +6809,7 @@ void Player::CheckDuelDistance(time_t currTime)
 
 bool Player::IsOutdoorPvPActive()
 {
-    return (isAlive() && !HasInvisibilityAura() && !HasStealthAura() && (HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_IN_PVP) || sWorld.IsPvPRealm())  && !HasUnitMovementFlag(SPLINEFLAG_FLYINGING2) && !isInFlight());
+    return (isAlive() && !HasInvisibilityAura() && !HasStealthAura() && (HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_IN_PVP) || sWorld.IsPvPRealm())  && !IsFreeFlying() && !IsTaxiFlying());
 }
 
 void Player::DuelComplete(DuelCompleteType type)
@@ -18460,7 +18458,7 @@ bool Player::canSeeOrDetect(Unit const* u, bool detect, bool inVisibleList, bool
     if (!viewPoint || !HasFarsightVision()) viewPoint = u;
 
     // different visible distance checks
-    if (isInFlight())                                     // what see player in flight
+    if (IsTaxiFlying())                                     // what see player in flight
     {
         if (!viewPoint->IsWithinDistInMap(u, _map.GetVisibilityDistance() + (inVisibleList ? World::GetVisibleObjectGreyDistance() : 0.0f), is3dDistance))
             return false;
@@ -18699,8 +18697,6 @@ void Player::SendInitialVisiblePackets(Unit* target)
     SendAuraDurationsForTarget(target);
     if (target->isAlive())
     {
-        if (target->GetMotionMaster()->GetCurrentMovementGeneratorType() != IDLE_MOTION_TYPE)
-            target->SendMonsterMoveWithSpeedToCurrentDestination(this);
         if (target->hasUnitState(UNIT_STAT_MELEE_ATTACKING) && target->getVictim())
             target->SendMeleeAttackStart(target->getVictim());
     }
@@ -18895,8 +18891,8 @@ void Player::SendInitialPacketsBeforeAddToMap()
     GetSession()->SendPacket(&data);
 
     // set fly flag if in fly form or taxi flight to prevent visually drop at ground in showup moment
-    if (HasAuraType(SPELL_AURA_MOD_INCREASE_FLIGHT_SPEED) || isInFlight())
-        AddUnitMovementFlag(SPLINEFLAG_FLYINGING2);
+    if (IsFreeFlying() || IsTaxiFlying())
+        m_movementInfo.AddMovementFlag(MOVEFLAG_FLYING);
 }
 
 void Player::SendInitialPacketsAfterAddToMap()
@@ -19362,7 +19358,7 @@ void Player::SummonIfPossible(bool agree)
         return;
 
     // stop taxi flight at summon
-    if (isInFlight())
+    if (IsTaxiFlying())
     {
         GetMotionMaster()->MovementExpired();
         CleanupAfterTaxiFlight();
@@ -20333,7 +20329,7 @@ void Player::UpdateUnderwaterState(Map* m, float x, float y, float z)
     }
 
     // Allow travel in dark water on taxi or transport
-    if ((liquid_status.type & MAP_LIQUID_TYPE_DARK_WATER) && !isInFlight() && !GetTransport())
+    if ((liquid_status.type & MAP_LIQUID_TYPE_DARK_WATER) && !IsTaxiFlying() && !GetTransport())
         m_MirrorTimerFlags |= UNDERWATER_INDARKWATER;
     else
         m_MirrorTimerFlags &= ~UNDERWATER_INDARKWATER;
@@ -20569,17 +20565,13 @@ bool Player::isTotalImmunity()
 
 void Player::BuildTeleportAckMsg(WorldPacket *data, float x, float y, float z, float ang) const
 {
+    MovementInfo mi = m_movementInfo;
+    mi.ChangePosition(x, y, z, ang);
+
     data->Initialize(MSG_MOVE_TELEPORT_ACK, 41);
     *data << GetPackGUID();
     *data << uint32(0);                                     // this value increments every time
-    *data << uint32(GetUnitMovementFlags());                // movement flags
-    *data << uint8(0);                                      // 2.3.0
-    *data << uint32(WorldTimer::getMSTime());                           // time
-    *data << x;
-    *data << y;
-    *data << z;
-    *data << ang;
-    *data << uint32(0);
+    *data << mi;
 }
 
 void Player::ResetTimeSync()

@@ -345,10 +345,6 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
         return;
     }
 
-    // can't use our own spells when we're in possession of another unit,
-    if (_player->isPossessing())
-        return;
-
     // client provided targets
     SpellCastTargets targets;
     recvPacket >> targets.ReadForCaster(_player);

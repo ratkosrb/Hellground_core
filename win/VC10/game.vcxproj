@@ -234,6 +234,11 @@
     <ClCompile Include="..\..\src\game\GameEvent.cpp" />
     <ClCompile Include="..\..\src\game\GossipDef.cpp" />
     <ClCompile Include="..\..\src\game\Mail.cpp" />
+    <ClCompile Include="..\..\src\game\movement\MoveSpline.cpp" />
+    <ClCompile Include="..\..\src\game\movement\MoveSplineInit.cpp" />
+    <ClCompile Include="..\..\src\game\movement\packet_builder.cpp" />
+    <ClCompile Include="..\..\src\game\movement\spline.cpp" />
+    <ClCompile Include="..\..\src\game\movement\util.cpp" />
     <ClCompile Include="..\..\src\game\QuestDef.cpp" />
     <ClCompile Include="..\..\src\game\UpdateData.cpp" />
     <ClCompile Include="..\..\src\game\WardenBase.cpp" />
@@ -246,7 +251,6 @@
     <ClCompile Include="..\..\src\game\Corpse.cpp" />
     <ClCompile Include="..\..\src\game\Creature.cpp" />
     <ClCompile Include="..\..\src\game\CreatureGroups.cpp" />
-    <ClCompile Include="..\..\src\game\DestinationHolder.cpp" />
     <ClCompile Include="..\..\src\game\DynamicObject.cpp" />
     <ClCompile Include="..\..\src\game\GameObject.cpp" />
     <ClCompile Include="..\..\src\game\Group.cpp" />
@@ -383,6 +387,14 @@
     <ClInclude Include="..\..\src\game\GameEvent.h" />
     <ClInclude Include="..\..\src\game\GossipDef.h" />
     <ClInclude Include="..\..\src\game\Mail.h" />
+    <ClInclude Include="..\..\src\game\movement\MoveSpline.h" />
+    <ClInclude Include="..\..\src\game\movement\MoveSplineFlag.h" />
+    <ClInclude Include="..\..\src\game\movement\MoveSplineInit.h" />
+    <ClInclude Include="..\..\src\game\movement\MoveSplineInitArgs.h" />
+    <ClInclude Include="..\..\src\game\movement\packet_builder.h" />
+    <ClInclude Include="..\..\src\game\movement\spline.h" />
+    <ClInclude Include="..\..\src\game\movement\spline.impl.h" />
+    <ClInclude Include="..\..\src\game\movement\typedefs.h" />
     <ClInclude Include="..\..\src\game\OutdoorPvPImpl.h" />
     <ClInclude Include="..\..\src\game\QuestDef.h" />
     <ClInclude Include="..\..\src\game\UpdateData.h" />
@@ -398,8 +410,6 @@
     <ClInclude Include="..\..\src\game\Corpse.h" />
     <ClInclude Include="..\..\src\game\Creature.h" />
     <ClInclude Include="..\..\src\game\CreatureGroups.h" />
-    <ClInclude Include="..\..\src\game\DestinationHolder.h" />
-    <ClInclude Include="..\..\src\game\DestinationHolderImp.h" />
     <ClInclude Include="..\..\src\game\DynamicObject.h" />
     <ClInclude Include="..\..\src\game\Formulas.h" />
     <ClInclude Include="..\..\src\game\GameObject.h" />
@@ -474,7 +484,6 @@
     <ClInclude Include="..\..\src\game\UnitAI.h" />
     <ClInclude Include="..\..\src\game\AuctionHouseBot.h" />
     <ClInclude Include="..\..\src\game\PlayerAI.h" />
-    <ClInclude Include="..\..\src\game\AnimalRandomMovementGenerator.h" />
     <ClInclude Include="..\..\src\game\ConfusedMovementGenerator.h" />
     <ClInclude Include="..\..\src\game\FleeingMovementGenerator.h" />
     <ClInclude Include="..\..\src\game\HomeMovementGenerator.h" />

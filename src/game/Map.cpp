@@ -836,7 +836,7 @@ void Map::PlayerRelocation(Player *player, float x, float y, float z, float orie
         DEBUG_LOG("Player %s relocation grid[%u,%u]cell[%u,%u]->grid[%u,%u]cell[%u,%u]", player->GetName(), old_cell.GridX(), old_cell.GridY(), old_cell.CellX(), old_cell.CellY(), new_cell.GridX(), new_cell.GridY(), new_cell.CellX(), new_cell.CellY());
 
         // update player position for group at taxi flight
-        if (player->GetGroup() && player->isInFlight())
+        if (player->GetGroup() && player->IsTaxiFlying())
             player->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_POSITION);
 
         NGridType* oldGrid = getNGrid(old_cell.GridX(), old_cell.GridY());
@@ -1992,6 +1992,7 @@ void Map::ScriptsProcess()
                 source->SetUInt32Value(step.script->datalong, step.script->datalong2);
                 break;
             case SCRIPT_COMMAND_MOVE_TO:
+            {
                 if (!source)
                 {
                     sLog.outError("SCRIPT_COMMAND_MOVE_TO call for NULL creature.");
@@ -2003,9 +2004,17 @@ void Map::ScriptsProcess()
                     sLog.outError("SCRIPT_COMMAND_MOVE_TO call for non-creature (TypeId: %u), skipping.",source->GetTypeId());
                     break;
                 }
-                ((Unit *)source)->SendMonsterMoveWithSpeed(step.script->x, step.script->y, step.script->z, step.script->datalong2);
-                ((Unit *)source)->GetMap()->CreatureRelocation(((Creature *)source), step.script->x, step.script->y, step.script->z, 0);
+
+                Unit * unit = (Unit*)source;
+                if (step.script->datalong2 != 0)
+                {
+                    float speed = unit->GetDistance(step.script->x, step.script->y, step.script->z) / ((float)step.script->datalong2 * 0.001f);
+                    unit->MonsterMoveWithSpeed(step.script->x, step.script->y, step.script->z, speed);
+                }
+                else
+                    unit->NearTeleportTo(step.script->x, step.script->y, step.script->z, unit->GetOrientation());
                 break;
+            }
             case SCRIPT_COMMAND_FLAG_SET:
                 if (!source)
                 {

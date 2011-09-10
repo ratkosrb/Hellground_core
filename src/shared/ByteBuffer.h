@@ -372,6 +372,15 @@ class ByteBuffer
                 append(buffer.contents(), buffer.wpos());
         }
 
+        void appendPackXYZ(float x, float y, float z)
+        {
+            uint32 packed = 0;
+            packed |= ((int)(x / 0.25f) & 0x7FF);
+            packed |= ((int)(y / 0.25f) & 0x7FF) << 11;
+            packed |= ((int)(z / 0.25f) & 0x3FF) << 22;
+            *this << packed;
+        }
+
         void appendPackGUID(uint64 guid)
         {
             uint8 packGUID[8+1];

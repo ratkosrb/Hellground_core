@@ -52,6 +52,8 @@
 #include "Policies/SingletonImp.h"
 #include "Map.h"
 
+#include "movement/MoveSplineInit.h"
+
 std::map<uint32, uint32> CreatureAIReInitialize;
 
 void TrainerSpellData::Clear()
@@ -166,7 +168,7 @@ m_meleeDamageSchoolMask(SPELL_SCHOOL_MASK_NORMAL),m_creatureInfo(NULL), m_DBTabl
     m_CreatureSpellCooldowns.clear();
     m_CreatureCategoryCooldowns.clear();
 
-    m_unit_movement_flags = SPLINEFLAG_WALKMODE_MODE;
+    SetWalk(true);
     DisableReputationGain = false;
 }
 
@@ -331,6 +333,8 @@ bool Creature::InitEntry(uint32 Entry, uint32 team, const CreatureData *data)
     SetSpeed(MOVE_SWIM, m_baseSpeed);
 
     SetFloatValue(OBJECT_FIELD_SCALE_X, cinfo->scale);
+
+    SetLevitate(CanFly());
 
     // checked at loading
     m_defaultMovementType = MovementGeneratorType(cinfo->MovementType);
@@ -1156,29 +1160,6 @@ void Creature::LoadGossipOptions()
     m_gossipOptionLoaded = true;
 }
 
-void Creature::AI_SendMoveToPacket(float x, float y, float z, uint32 time, uint32 MovementFlags, uint8 type)
-{
-    /*    uint32 timeElap = WorldTimer::getMSTime();
-        if ((timeElap - m_startMove) < m_moveTime)
-        {
-            oX = (dX - oX) * ((timeElap - m_startMove) / m_moveTime);
-            oY = (dY - oY) * ((timeElap - m_startMove) / m_moveTime);
-        }
-        else
-        {
-            oX = dX;
-            oY = dY;
-        }
-
-        dX = x;
-        dY = y;
-        m_orientation = atan2((oY - dY), (oX - dX));
-
-        m_startMove = WorldTimer::getMSTime();
-        m_moveTime = time;*/
-    SendMonsterMove(x, y, z, time);
-}
-
 Player *Creature::GetLootRecipient() const
 {
     if (!m_lootRecipient) return NULL;
@@ -1487,7 +1468,7 @@ bool Creature::LoadFromDB(uint32 guid, Map *map)
         if (isWorldBoss())
             loot.loadLootFromDB(this);
 
-        if (canFly())
+        if (CanFly())
         {
             float tz = GetMap()->GetHeight(data->posX,data->posY,data->posZ,false);
             if (data->posZ - tz > 0.1)
@@ -1638,7 +1619,7 @@ bool Creature::canStartAttack(Unit const* who) const
 {
     if (isCivilian()
         || !who->isInAccessiblePlacefor (this)
-        || !canFly() && GetDistanceZ(who) > CREATURE_Z_ATTACK_RANGE
+        || !CanFly() && GetDistanceZ(who) > CREATURE_Z_ATTACK_RANGE
         || !IsWithinDistInMap(who, GetAttackDistance(who)))
         return false;
 
@@ -1736,7 +1717,7 @@ void Creature::setDeathState(DeathState s)
         Unit::setDeathState(ALIVE);
         CreatureInfo const *cinfo = GetCreatureInfo();
         RemoveFlag (UNIT_FIELD_FLAGS, UNIT_FLAG_SKINNABLE);
-        AddUnitMovementFlag(SPLINEFLAG_WALKMODE_MODE);
+        SetWalk(true);
         SetUInt32Value(UNIT_NPC_FLAGS, cinfo->npcflag);
         clearUnitState(UNIT_STAT_ALL_STATE);
         i_motionMaster.Initialize();
@@ -1757,7 +1738,15 @@ bool Creature::FallGround()
     if (fabs(z - ground_Z) < 0.1f)
         return false;
 
-    GetMotionMaster()->MoveFall(ground_Z, EVENT_FALL_GROUND);
+    Movement::MoveSplineInit init(*this);
+    init.MoveTo(GetPositionX(),GetPositionY(),z);
+    init.SetFall();
+    init.Launch();
+
+    // hacky solution: by some reason died creatures not updated, that's why need finalize movement state
+    GetMap()->CreatureRelocation(this, GetPositionX(), GetPositionY(), ground_Z, GetOrientation());
+    DisableSpline();
+
     Unit::setDeathState(DEAD_FALLING);
     return true;
 }
@@ -2177,8 +2166,8 @@ bool Creature::LoadCreaturesAddon(bool reload)
     if (cainfo->emote != 0)
         SetUInt32Value(UNIT_NPC_EMOTESTATE, cainfo->emote);
 
-    if (cainfo->move_flags != 0)
-        SetUnitMovementFlags(cainfo->move_flags);
+    if (cainfo->move_flags & SPLINEFLAG_FLYING)
+        SetLevitate(true);
 
     //Load Path
     if (cainfo->path_id != 0)
@@ -2557,4 +2546,28 @@ time_t Creature::GetLinkedCreatureRespawnTime() const
     }
 
     return 0;
+}
+
+void Creature::SetWalk(bool enable)
+{
+    if (enable)
+        m_movementInfo.AddMovementFlag(MOVEFLAG_WALK_MODE);
+    else
+        m_movementInfo.RemoveMovementFlag(MOVEFLAG_WALK_MODE);
+    WorldPacket data(enable ? SMSG_SPLINE_MOVE_SET_WALK_MODE : SMSG_SPLINE_MOVE_SET_RUN_MODE, 9);
+    data << GetPackGUID();
+    SendMessageToSet(&data, true);
+}
+
+void Creature::SetLevitate(bool enable)
+{
+    if (enable)
+        m_movementInfo.AddMovementFlag(MOVEFLAG_LEVITATING);
+    else
+        m_movementInfo.RemoveMovementFlag(MOVEFLAG_LEVITATING);
+
+    // GUESSED ! prev opcode not present in 2.4.3
+    WorldPacket data(enable ? SMSG_SPLINE_MOVE_UNSET_FLYING : SMSG_SPLINE_MOVE_SET_FLYING, 9);
+    data << GetPackGUID();
+    SendMessageToSet(&data, true);
 }

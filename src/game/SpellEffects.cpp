@@ -2650,7 +2650,7 @@ void Spell::EffectTriggerMissileSpell(uint32 effect_idx)
 
 void Spell::EffectTeleportUnits(uint32 i)
 {
-    if (!unitTarget || unitTarget->isInFlight())
+    if (!unitTarget || unitTarget->IsTaxiFlying())
         return;
 
     // If not exist data for dest location - return
@@ -4460,7 +4460,7 @@ void Spell::EffectTeleUnitsFaceCaster(uint32 i)
     if (!unitTarget)
         return;
 
-    if (unitTarget->isInFlight())
+    if (unitTarget->IsTaxiFlying())
         return;
 
     uint32 mapid = m_caster->GetMapId();
@@ -6305,7 +6305,7 @@ void Spell::EffectSanctuary(uint32 /*i*/)
 
     for (std::list<Unit*>::iterator iter = targets.begin(); iter != targets.end(); ++iter)
     {
-        if (!(*iter)->hasUnitState(UNIT_STAT_CASTING))
+        if (!(*iter)->IsNonMeleeSpellCasted(false))
             continue;
 
         for (uint32 i = CURRENT_FIRST_NON_MELEE_SPELL; i < CURRENT_MAX_SPELL; i++)
@@ -6436,7 +6436,7 @@ void Spell::EffectStuck(uint32 /*i*/)
     sLog.outDebug("Spell Effect: Stuck");
     sLog.outDetail("Player %s (guid %u) used auto-unstuck future at map %u (%f, %f, %f)", pTarget->GetName(), pTarget->GetGUIDLow(), m_caster->GetMapId(), m_caster->GetPositionX(), pTarget->GetPositionY(), pTarget->GetPositionZ());
 
-    if (pTarget->isInFlight())
+    if (pTarget->IsTaxiFlying())
         return;
 
     // homebind location is loaded always
@@ -6854,7 +6854,7 @@ void Spell::EffectBlock(uint32 /*i*/)
 
 void Spell::EffectLeapForward(uint32 i)
 {
-    if (unitTarget->isInFlight())
+    if (unitTarget->IsTaxiFlying())
         return;
 
     if (m_spellInfo->rangeIndex== 1)                        //self range
@@ -6916,7 +6916,7 @@ void Spell::EffectLeapForward(uint32 i)
 }
 void Spell::EffectLeapBack(uint32 i)
 {
-    if (unitTarget->isInFlight())
+    if (unitTarget->IsTaxiFlying())
         return;
 
     m_caster->KnockBackFrom(unitTarget,float(m_spellInfo->EffectMiscValue[i])/10,float(damage)/10);
@@ -7050,8 +7050,8 @@ void Spell::EffectCharge2(uint32 /*i*/)
     else
         return;
 
-    m_caster->SendMonsterMoveWithSpeed(x, y, z, SPLINEFLAG_WALKMODE_MODE);
-    m_caster->Relocate(x, y, z);
+    // Only send MOVEMENTFLAG_WALK_MODE, client has strange issues with other move flags
+    m_caster->MonsterMoveWithSpeed(x, y, z, 24.f);
 
     // not all charge effects used in negative spells
     if (unitTarget && unitTarget != m_caster && !IsPositiveSpell(m_spellInfo->Id))
@@ -7300,8 +7300,8 @@ void Spell::EffectSummonDeadPet(uint32 /*i*/)
 
     float x,y,z;
     _player->GetPosition(x, y, z);
-    _player->GetMap()->CreatureRelocation(pet, x, y, z, _player->GetOrientation());
-    pet->SendMonsterMove(x,y,z,0,NULL);
+
+    pet->NearTeleportTo(x, y, z, _player->GetOrientation());
 
     pet->SetUInt32Value(UNIT_DYNAMIC_FLAGS, 0);
     pet->RemoveFlag (UNIT_FIELD_FLAGS, UNIT_FLAG_SKINNABLE);

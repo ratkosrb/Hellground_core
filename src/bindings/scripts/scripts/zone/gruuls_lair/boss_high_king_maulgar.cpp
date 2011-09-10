@@ -722,7 +722,7 @@ struct TRINITY_DLL_DECL boss_krosh_firehandAI : public ScriptedAI
         if(GreaterFireball_Timer < diff)
         {
             // will cast only when in range of spell
-            if(m_creature->GetDistance2d(m_creature->getVictim()) < 30 && !m_creature->hasUnitState(UNIT_STAT_CASTING))
+            if(m_creature->GetDistance2d(m_creature->getVictim()) < 30 && !m_creature->IsNonMeleeSpellCasted(false))
                 AddSpellToCast(m_creature->getVictim(), SPELL_GREATER_FIREBALL);
                 //DoCast(m_creature->getVictim(), SPELL_GREATER_FIREBALL);
             GreaterFireball_Timer = 3000;

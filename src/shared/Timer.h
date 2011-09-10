@@ -141,4 +141,17 @@ struct PeriodicTimer
         int32 i_expireTime;
 };
 
+struct ShortTimeTracker
+{
+    public:
+        ShortTimeTracker(int32 expiry = 0) : i_expiryTime(expiry) {}
+        void Update(int32 diff) { i_expiryTime -= diff; }
+        bool Passed() const { return (i_expiryTime <= 0); }
+        void Reset(int32 interval) { i_expiryTime = interval; }
+        int32 GetExpiry() const { return i_expiryTime; }
+
+    private:
+        int32 i_expiryTime;
+};
+
 #endif

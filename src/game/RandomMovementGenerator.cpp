@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,24 +19,26 @@
 #include "Creature.h"
 #include "MapManager.h"
 #include "RandomMovementGenerator.h"
-#include "DestinationHolderImp.h"
 #include "Map.h"
 #include "Util.h"
+#include "movement/MoveSplineInit.h"
+#include "movement/MoveSpline.h"
 
 template<>
-void RandomMovementGenerator<Creature>::_setRandomLocation(Creature &creature)
+void
+RandomMovementGenerator<Creature>::_setRandomLocation(Creature &creature)
 {
     float respX, respY, respZ, respO, currZ, destX, destY, destZ, wander_distance, travelDistZ;
 
     creature.GetRespawnCoord(respX, respY, respZ, &respO, &wander_distance);
 
     currZ = creature.GetPositionZ();
-    Map const* map = creature.GetBaseMap();
+    Map const* map = creature.GetMap();
 
     // For 2D/3D system selection
     //bool is_land_ok  = creature.CanWalk();                // not used?
     //bool is_water_ok = creature.CanSwim();                // not used?
-    bool is_air_ok = creature.canFly();
+    bool is_air_ok = creature.CanFly();
 
     const float angle = rand_norm() * (M_PI*2.0f);
     const float range = rand_norm() * wander_distance;
@@ -90,23 +92,17 @@ void RandomMovementGenerator<Creature>::_setRandomLocation(Creature &creature)
         }
     }
 
-    Traveller<Creature> traveller(creature);
-
-    creature.SetOrientation(creature.GetAngle(destX, destY));
-    i_destinationHolder.SetDestination(traveller, destX, destY, destZ);
-    creature.addUnitState(UNIT_STAT_ROAMING);
-
     if (is_air_ok)
-    {
-        i_nextMoveTime.Reset(i_destinationHolder.GetTotalTravelTime());
-        creature.AddUnitMovementFlag(SPLINEFLAG_FLYINGING2);
-    }
-    //else if (is_water_ok)                                 // Swimming mode to be done with more than this check
+        i_nextMoveTime.Reset(0);
     else
-    {
-        i_nextMoveTime.Reset(i_destinationHolder.GetTotalTravelTime() + urand(500, 10000));
-        creature.AddUnitMovementFlag(SPLINEFLAG_WALKMODE_MODE);
-    }
+        i_nextMoveTime.Reset(urand(500, 10000));
+
+    creature.addUnitState(UNIT_STAT_ROAMING_MOVE);
+
+    Movement::MoveSplineInit init(creature);
+    init.MoveTo(destX, destY, destZ);
+    init.SetWalk(true);
+    init.Launch();
 }
 
 template<>
@@ -115,11 +111,7 @@ void RandomMovementGenerator<Creature>::Initialize(Creature &creature)
     if (!creature.isAlive())
         return;
 
-    if (creature.canFly())
-        creature.AddUnitMovementFlag(SPLINEFLAG_FLYINGING2);
-    else
-        creature.AddUnitMovementFlag(SPLINEFLAG_WALKMODE_MODE);
-
+    creature.addUnitState(UNIT_STAT_ROAMING|UNIT_STAT_ROAMING_MOVE);
     _setRandomLocation(creature);
 }
 
@@ -130,41 +122,47 @@ void RandomMovementGenerator<Creature>::Reset(Creature &creature)
 }
 
 template<>
+void RandomMovementGenerator<Creature>::Interrupt(Creature &creature)
+{
+    creature.clearUnitState(UNIT_STAT_ROAMING|UNIT_STAT_ROAMING_MOVE);
+    creature.SetWalk(false);
+}
+
+template<>
+void RandomMovementGenerator<Creature>::Finalize(Creature &creature)
+{
+    creature.clearUnitState(UNIT_STAT_ROAMING|UNIT_STAT_ROAMING_MOVE);
+    creature.SetWalk(false);
+}
+
+template<>
 bool RandomMovementGenerator<Creature>::Update(Creature &creature, const uint32 &diff)
 {
-    if (creature.hasUnitState(UNIT_STAT_ROOT | UNIT_STAT_STUNNED | UNIT_STAT_DISTRACTED | UNIT_STAT_DIED))
+    if (creature.hasUnitState(UNIT_STAT_NOT_MOVE))
     {
-        i_nextMoveTime.Update(i_nextMoveTime.GetExpiry());  // Expire the timer
-        creature.clearUnitState(UNIT_STAT_ROAMING);
+        i_nextMoveTime.Reset(0);  // Expire the timer
+        creature.clearUnitState(UNIT_STAT_ROAMING_MOVE);
         return true;
     }
 
-    i_nextMoveTime.Update(diff);
-
-    if (i_destinationHolder.HasArrived() && !creature.IsStopped() && !creature.canFly())
-        creature.clearUnitState(UNIT_STAT_ROAMING);
-
-    if (!i_destinationHolder.HasArrived() && creature.IsStopped())
-        creature.addUnitState(UNIT_STAT_ROAMING);
-
-    CreatureTraveller traveller(creature);
-
-    if (i_destinationHolder.UpdateTraveller(traveller, diff, true))
+    if (creature.movespline->Finalized())
     {
+        i_nextMoveTime.Update(diff);
         if (i_nextMoveTime.Passed())
-        {
-            if (creature.canFly())
-                creature.AddUnitMovementFlag(SPLINEFLAG_FLYINGING2);
-            else
-                creature.AddUnitMovementFlag(SPLINEFLAG_WALKMODE_MODE);
-
             _setRandomLocation(creature);
-        }
-        else if (creature.isPet() && creature.GetOwner() && !creature.IsWithinDist(creature.GetOwner(), PET_FOLLOW_DIST+2.5f))
-        {
-           creature.AddUnitMovementFlag(SPLINEFLAG_WALKMODE_MODE);
-           _setRandomLocation(creature);
-        }
     }
+    return true;
+}
+
+template<>
+bool RandomMovementGenerator<Creature>::GetResetPosition(Creature& c, float& x, float& y, float& z)
+{
+    float radius;
+    c.GetRespawnCoord(x, y, z, NULL, &radius);
+
+    // use current if in range
+    if (c.IsInRange3d(x, y, z, 0.0f, radius))
+        c.GetPosition(x,y,z);
+
     return true;
 }

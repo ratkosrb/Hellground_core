@@ -129,11 +129,11 @@ struct TRINITY_DLL_DECL boss_akilzonAI : public ScriptedAI
             float x, y, z;
             m_creature->GetRandomPoint(m_creature->GetPositionX(), m_creature->GetPositionY(), m_creature->GetPositionZ()+15.0f, 30.0f, x, y, z);
 
-            Unit* Eagle = m_creature->SummonCreature(NPC_SOARING_EAGLE, x, y, z, m_creature->GetOrientation(), TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 1000);
+            Creature* Eagle = m_creature->SummonCreature(NPC_SOARING_EAGLE, x, y, z, m_creature->GetOrientation(), TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 1000);
             if(Eagle)
             {
                 Eagle->setFaction(me->getFaction());
-                Eagle->SetUnitMovementFlags(MOVEFLAG_LEVITATING | MOVEFLAG_ONTRANSPORT);
+                Eagle->SetLevitate(true);
                 Eagle->GetMotionMaster()->MoveIdle();
             }
         }
@@ -240,7 +240,7 @@ struct TRINITY_DLL_DECL boss_akilzonAI : public ScriptedAI
             // throw player to air and cast electrical storm on (should be handled by proper script effect targeting?)
             float x,y,z;
             target->GetPosition(x,y,z);
-            target->SendMonsterMove(x,y,m_creature->GetPositionZ()+15,0);
+            target->NearTeleportTo(x,y,m_creature->GetPositionZ()+15.0f, target->GetOrientation());
             DoScriptText(EMOTE_STORM, m_creature, 0, true);
             m_creature->CastSpell(target, SPELL_ELECTRICAL_STORM, false);
 
@@ -305,8 +305,8 @@ struct TRINITY_DLL_DECL mob_soaring_eagleAI : public ScriptedAI
         {
             float x, y, z;
             Akil->GetRandomPoint(Akil->GetPositionX(), Akil->GetPositionY(), Akil->GetPositionZ()+15.0f, 30.0f, x, y, z);
-            if(m_creature->HasUnitMovementFlag(SPLINEFLAG_WALKMODE_MODE))
-                m_creature->RemoveUnitMovementFlag(SPLINEFLAG_WALKMODE_MODE);
+            if(m_creature->IsWalking())
+                m_creature->SetWalk(false);
             m_creature->GetMotionMaster()->MovePoint(1, x, y, z);
             canMoveRandom = false;
         }

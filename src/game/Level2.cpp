@@ -442,7 +442,7 @@ bool ChatHandler::HandleGoObjectCommand(const char* args)
     }
 
     // stop flight if need
-    if (_player->isInFlight())
+    if (_player->IsTaxiFlying())
     {
         _player->GetMotionMaster()->MovementExpired();
         _player->CleanupAfterTaxiFlight();
@@ -485,7 +485,7 @@ bool ChatHandler::HandleGoTicketCommand(const char * args)
     mapid = ticket->map;
 
     Player* _player = m_session->GetPlayer();
-    if (_player->isInFlight())
+    if (_player->IsTaxiFlying())
     {
         _player->GetMotionMaster()->MovementExpired();
         _player->CleanupAfterTaxiFlight();
@@ -529,7 +529,7 @@ bool ChatHandler::HandleGoTriggerCommand(const char* args)
     }
 
     // stop flight if need
-    if (_player->isInFlight())
+    if (_player->IsTaxiFlying())
     {
         _player->GetMotionMaster()->MovementExpired();
         _player->CleanupAfterTaxiFlight();
@@ -574,7 +574,7 @@ bool ChatHandler::HandleGoGraveyardCommand(const char* args)
     }
 
     // stop flight if need
-    if (_player->isInFlight())
+    if (_player->IsTaxiFlying())
     {
         _player->GetMotionMaster()->MovementExpired();
         _player->CleanupAfterTaxiFlight();
@@ -679,7 +679,7 @@ bool ChatHandler::HandleGoCreatureCommand(const char* args)
     }
 
     // stop flight if need
-    if (_player->isInFlight())
+    if (_player->IsTaxiFlying())
     {
         _player->GetMotionMaster()->MovementExpired();
         _player->CleanupAfterTaxiFlight();
@@ -3746,16 +3746,16 @@ bool ChatHandler::HandleNpcUnFollowCommand(const char* /*args*/)
         return false;
     }
 
-    if (/*creature->GetMotionMaster()->empty() ||*/
-        creature->GetMotionMaster()->GetCurrentMovementGeneratorType ()!=TARGETED_MOTION_TYPE)
+    if (creature->GetMotionMaster()->empty() ||
+        creature->GetMotionMaster()->GetCurrentMovementGeneratorType ()!=FOLLOW_MOTION_TYPE)
     {
-        PSendSysMessage(LANG_CREATURE_NOT_FOLLOW_YOU, creature->GetName());
+        PSendSysMessage(LANG_CREATURE_NOT_FOLLOW_YOU);
         SetSentErrorMessage(true);
         return false;
     }
 
-    TargetedMovementGenerator<Creature> const* mgen
-        = static_cast<TargetedMovementGenerator<Creature> const*>((creature->GetMotionMaster()->top()));
+    FollowMovementGenerator<Creature> const* mgen
+        = static_cast<FollowMovementGenerator<Creature> const*>((creature->GetMotionMaster()->top()));
 
     if (mgen->GetTarget()!=player)
     {

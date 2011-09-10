@@ -2025,7 +2025,7 @@ class TRINITY_DLL_SPEC Player : public Unit
         /*********************************************************/
         /***                 VARIOUS SYSTEMS                   ***/
         /*********************************************************/
-        MovementInfo m_movementInfo;
+
         uint32 m_lastFallTime;
         float  m_lastFallZ;
         void SetFallInformation(uint32 time, float z)
@@ -2036,12 +2036,12 @@ class TRINITY_DLL_SPEC Player : public Unit
 
         void BuildTeleportAckMsg( WorldPacket *data, float x, float y, float z, float ang) const;
 
-        bool isMoving() const { return HasUnitMovementFlag(MOVEFLAG_MOVING); }
-        bool isTurning() const { return HasUnitMovementFlag(MOVEFLAG_TURNING); }
-        bool isMovingOrTurning() const { return HasUnitMovementFlag(MOVEFLAG_TURNING | MOVEFLAG_MOVING); }
+        bool isMoving() const { return m_movementInfo.HasMovementFlag(movementFlagsMask); }
+        bool isMovingOrTurning() const { return m_movementInfo.HasMovementFlag(movementOrTurningFlagsMask); }
 
-        bool CanFly() const { return HasUnitMovementFlag(MOVEFLAG_CAN_FLY); }
-        bool IsFlying() const { return HasUnitMovementFlag(SPLINEFLAG_FLYINGING2); }
+        bool CanFly() const { return m_movementInfo.HasMovementFlag(MOVEFLAG_CAN_FLY); }
+        bool IsFlying() const { return m_movementInfo.HasMovementFlag(MOVEFLAG_FLYING); }
+        bool IsFreeFlying() const { return HasAuraType(SPELL_AURA_MOD_INCREASE_FLIGHT_SPEED) || HasAuraType(SPELL_AURA_FLY); }
 
         void HandleDrowning(uint32 time_diff);
         void HandleFallDamage(MovementInfo& movementInfo);
