@@ -86,7 +86,7 @@ namespace Movement
         unit.m_movementInfo.SetMovementFlags((MovementFlags)moveFlags);
         move_spline.Initialize(args);
 
-        WorldPacket data(SMSG_MONSTER_MOVE, 41 + unit.GetPackGUID().size());
+        WorldPacket data(SMSG_MONSTER_MOVE, 64);
         data << unit.GetPackGUID();
         PacketBuilder::WriteMonsterMove(move_spline, data);
         unit.SendMessageToSet(&data,true);

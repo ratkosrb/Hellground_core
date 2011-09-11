@@ -99,6 +99,7 @@ namespace Movement
 
     void WriteLinearPath(const Spline<int32>& spline, ByteBuffer& data)
     {
+        sLog.outString("WriteLinearPath");
         uint32 last_idx = spline.getPointCount() - 3;
         const Vector3 * real_path = &spline.getPoint(1);
 
@@ -121,6 +122,7 @@ namespace Movement
 
     void WriteCatmullRomPath(const Spline<int32>& spline, ByteBuffer& data)
     {
+        sLog.outString("WriteCatmullRomPath");
         uint32 count = spline.getPointCount() - 3;
         data << count;
         data.append<Vector3>(&spline.getPoint(2), count);
@@ -128,6 +130,7 @@ namespace Movement
 
     void WriteCatmullRomCyclicPath(const Spline<int32>& spline, ByteBuffer& data)
     {
+        sLog.outString("WriteCatmullCyclicPath");
         uint32 count = spline.getPointCount() - 3;
         data << uint32(count + 1);
         data << spline.getPoint(1); // fake point, client will erase it from the spline after first cycle done

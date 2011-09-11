@@ -388,20 +388,10 @@ void MotionMaster::MoveTaxiFlight(uint32 path, uint32 pathnode)
         if (path < sTaxiPathNodesByPath.size())
         {
             //DEBUG_FILTER_LOG(LOG_FILTER_AI_AND_MOVEGENSS, "%s taxi to (Path %u node %u)", m_owner->GetGuidStr().c_str(), path, pathnode);
-            FlightPathMovementGenerator* mgen = new FlightPathMovementGenerator(sTaxiPathNodesByPath[path],pathnode);
+            FlightPathMovementGenerator* mgen = new FlightPathMovementGenerator(path,pathnode);
             Mutate(mgen);
         }
-        //else
-        //{
-            //sLog.outError("%s attempt taxi to (nonexistent Path %u node %u)",
-            //    m_owner->GetGuidStr().c_str(), path, pathnode);
-        //}
     }
-    //else
-    //{
-    //    sLog.outError("%s attempt taxi to (Path %u node %u)",
-    //        m_owner->GetGuidStr().c_str(), path, pathnode);
-    //}
 }
 
 void MotionMaster::MoveDistract(uint32 timer)

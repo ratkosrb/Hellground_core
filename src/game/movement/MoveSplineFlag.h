@@ -37,11 +37,11 @@ namespace Movement
             None         = 0x00000000,
                                                  // x00-xFF(first byte) used as animation Ids storage in pair with Animation flag
             Done         = 0x00000100,
-            Falling      = 0x00000200,           // Affects elevation computation, can't be combined with Parabolic flag
+            Flying       = 0x00000200,           // Affects elevation computation, can't be combined with Parabolic flag
             No_Spline    = 0x00000400,
             Parabolic    = 0x00000800,           // Affects elevation computation, can't be combined with Falling flag
             Walkmode     = 0x00001000,
-            Flying       = 0x00002000,           // Smooth movement(Catmullrom interpolation mode), flying animation
+            Falling     = 0x00002000,           // Smooth movement(Catmullrom interpolation mode), flying animation
             Knockback    = 0x00004000,           // Model orientation fixed
             Final_Point  = 0x00008000,
             Final_Target = 0x00010000,
