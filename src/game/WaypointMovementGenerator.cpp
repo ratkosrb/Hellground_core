@@ -277,7 +277,7 @@ void FlightPathMovementGenerator::Finalize(Player & player)
     player.Unmount();
     player.RemoveFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_TAXI_FLIGHT);
 
-    if(player.m_taxi.empty())
+    if (player.m_taxi.empty())
     {
         player.getHostilRefManager().setOnlineOfflineState(true);
         if(player.pvpInfo.inHostileArea)
@@ -286,6 +286,7 @@ void FlightPathMovementGenerator::Finalize(Player & player)
         // update z position to ground and orientation for landing point
         // this prevent cheating with landing  point at lags
         // when client side flight end early in comparison server side
+        player.m_movementInfo.AddMovementFlag(MOVEFLAG_WALK_MODE);
         player.StopMoving();
     }
 }
@@ -304,13 +305,17 @@ void FlightPathMovementGenerator::Reset(Player & player)
     player.SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_TAXI_FLIGHT);
 
     Movement::MoveSplineInit init(player);
-    uint32 end = GetPathAtMapEnd();
+   /* uint32 end = GetPathAtMapEnd();
     for (uint32 i = GetCurrentNode(); i != end; ++i)
     {
         G3D::Vector3 vertice((*i_path)[i].x,(*i_path)[i].y,(*i_path)[i].z);
         init.Path().push_back(vertice);
     }
-    init.SetFirstPointId(GetCurrentNode());
+    init.SetFirstPointId(GetCurrentNode());*/
+
+    // if pathed spline subsystem is fixed remove moveto
+    init.MoveTo((*i_path)[GetCurrentNode()].x, (*i_path)[GetCurrentNode()].y, (*i_path)[GetCurrentNode()].z);
+    
     init.SetFly();
     init.SetVelocity(PLAYER_FLIGHT_SPEED);
     init.Launch();
@@ -318,21 +323,38 @@ void FlightPathMovementGenerator::Reset(Player & player)
 
 bool FlightPathMovementGenerator::Update(Player &player, const uint32 &diff)
 {
-    uint32 pointId = (uint32)player.movespline->currentPathIdx();
-    if (pointId > i_currentNode)
+    if (GetCurrentNode() < GetPath().size())
     {
-        bool departureEvent = true;
-        do
+        if (player.movespline->Finalized())
         {
-            DoEventIfAny(player,(*i_path)[i_currentNode],departureEvent);
-            if (pointId == i_currentNode)
-                break;
-            i_currentNode += (uint32)departureEvent;
-            departureEvent = !departureEvent;
-        } while(true);
+            DoEventIfAny(player,(*i_path)[i_currentNode],true);
+
+            uint32 curMap = GetPath()[GetCurrentNode()].mapid;
+            ++i_currentNode;
+            if (GetCurrentNode() < GetPath().size())
+            {
+                DEBUG_LOG("loading node %u for player %s", i_currentNode, player.GetName());
+                if (GetPath()[GetCurrentNode()].mapid == curMap)
+                {
+                    player.MonsterSay("1", LANG_UNIVERSAL, 0);
+                    // IF SOMEONE FIGURE OUT WHY SPLINE SUBSYSTEM WHEN USING PATH IS FINALIZED RIGHT AFTER LAUNCH THAT SHIT CAN BE REMOVED AND DONE IN PROPER WAY SEE: COMMENTED OUT CODE IN ::Reset
+                    Movement::MoveSplineInit init(player);
+                    init.MoveTo(GetPath()[GetCurrentNode()].x, GetPath()[GetCurrentNode()].y, GetPath()[GetCurrentNode()].z);
+                    init.SetFly();
+                    init.SetVelocity(PLAYER_FLIGHT_SPEED);
+                    init.Launch();
+
+                    DoEventIfAny(player,(*i_path)[i_currentNode],false);
+                }
+                return true;
+            }
+        }
+        else
+            return true;
     }
 
-    return i_currentNode < (i_path->size()-1);
+    // we have arrived at the end of the path
+    return false;
 }
 
 void FlightPathMovementGenerator::SetCurrentNodeAfterTeleport()
