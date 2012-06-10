@@ -2438,7 +2438,7 @@ std::string Creature::GetAIName() const
 
 std::string Creature::GetScriptName()
 {
-    return sScriptMgr.GetScriptName(GetScriptId());
+    return sOldScriptMgr.GetScriptName(GetScriptId());
 }
 
 uint32 Creature::GetScriptId()

@@ -972,7 +972,7 @@ void GameObject::Use(Unit* user)
     Player *pPlayer = user->GetCharmerOrOwnerPlayerOrPlayerItself();
     if (pPlayer)
     {
-        if (sScriptMgr.OnGameObjectUse(pPlayer, this))
+        if (sOldScriptMgr.OnGameObjectUse(pPlayer, this))
             return;
     }
     GetMap()->ScriptsStart(sGameObjectScripts, GetDBTableGUIDLow(), user, this);
@@ -1007,7 +1007,7 @@ void GameObject::Use(Unit* user)
 
             if (GetGOInfo()->chest.eventId)
             {
-                if (!sScriptMgr.OnProcessEvent(GetGOInfo()->chest.eventId, this, pPlayer, true))
+                if (!sOldScriptMgr.OnProcessEvent(GetGOInfo()->chest.eventId, this, pPlayer, true))
                     pPlayer->GetMap()->ScriptsStart(sEventScripts, GetGOInfo()->chest.eventId, pPlayer, this);
             }
 
@@ -1096,7 +1096,7 @@ void GameObject::Use(Unit* user)
 
                 if (info->goober.eventId)
                 {
-                    if (!sScriptMgr.OnProcessEvent(info->goober.eventId, this, pPlayer, true))
+                    if (!sOldScriptMgr.OnProcessEvent(info->goober.eventId, this, pPlayer, true))
                         pPlayer->GetMap()->ScriptsStart(sEventScripts, info->goober.eventId, pPlayer, this);
                 }
 

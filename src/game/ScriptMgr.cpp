@@ -1004,26 +1004,26 @@ uint32 ScriptMgr::GetCompletedCinematicScriptId(uint32 cinematic_id) const
 
 uint32 GetEventIdScriptId(uint32 eventId)
 {
-    return sScriptMgr.GetEventIdScriptId(eventId);
+    return sOldScriptMgr.GetEventIdScriptId(eventId);
 }
 
 uint32 GetSpellIdScriptId(uint32 eventId)
 {
-    return sScriptMgr.GetSpellIdScriptId(eventId);
+    return sOldScriptMgr.GetSpellIdScriptId(eventId);
 }
 
 // Functions for scripting access
 uint32 GetAreaTriggerScriptId(uint32 trigger_id)
 {
-    return sScriptMgr.GetAreaTriggerScriptId(trigger_id);
+    return sOldScriptMgr.GetAreaTriggerScriptId(trigger_id);
 }
 
 uint32 GetCompletedCinematicScriptId(uint32 cinematic_id)
 {
-    return sScriptMgr.GetCompletedCinematicScriptId(cinematic_id);
+    return sOldScriptMgr.GetCompletedCinematicScriptId(cinematic_id);
 }
 
 uint32 GetScriptId(const char *name)
 {
-    return sScriptMgr.GetScriptId(name);
+    return sOldScriptMgr.GetScriptId(name);
 }

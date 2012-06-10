@@ -194,7 +194,7 @@ class ScriptMgr
         bool (HELLGROUND_IMPORT* m_pOnSpellHandleEffect) (Unit *pCaster, Unit* pUnit, Item* pItem, GameObject* pGameObject, SpellEntry const *pSpell, uint32 effectIndex);
 };
 
-#define sScriptMgr (*ACE_Singleton<ScriptMgr, ACE_Null_Mutex>::instance())
+#define sOldScriptMgr (*ACE_Singleton<ScriptMgr, ACE_Null_Mutex>::instance())
 
 HELLGROUND_DLL_SPEC uint32 GetAreaTriggerScriptId(uint32 triggerId);
 HELLGROUND_DLL_SPEC uint32 GetCompletedCinematicScriptId(uint32 triggerId);

@@ -67,6 +67,12 @@
     <Filter Include="MoveMaps">
       <UniqueIdentifier>{a57f8b6e-9cc3-40b0-8a37-cb2b721813dd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Scripts">
+      <UniqueIdentifier>{dbf023c6-f5f7-4c22-8f16-4cb7e9a6f52b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scripts\SpellScripts">
+      <UniqueIdentifier>{ecd0f741-2185-4545-a73c-5ec9090ad690}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\game\Channel.cpp">
@@ -561,6 +567,15 @@
     </ClCompile>
     <ClCompile Include="..\..\src\game\WorldEventProcessor.cpp">
       <Filter>World/Others</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\game\NScriptMgr.cpp">
+      <Filter>Scripts</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\game\ScriptLoader.cpp">
+      <Filter>Scripts</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\game\spell_example.cpp">
+      <Filter>Scripts\SpellScripts</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1065,6 +1080,15 @@
     </ClInclude>
     <ClInclude Include="..\..\src\game\WorldEventProcessor.h">
       <Filter>World/Others</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\game\NScriptMgr.h">
+      <Filter>Scripts</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\game\SpellScript.h">
+      <Filter>Scripts</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\game\ScriptLoader.h">
+      <Filter>Scripts</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

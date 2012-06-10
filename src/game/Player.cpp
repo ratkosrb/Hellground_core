@@ -1234,7 +1234,7 @@ void Player::Update(uint32 update_diff, uint32 p_time)
             {
                 if (!IsWithinMeleeRange(pVictim))
                 {
-                    setAttackTimer(BASE_ATTACK,100);
+                    setAttackTimer(BASE_ATTACK, 100);
                     if (m_swingErrorMsg != 1)                // send single time (client auto repeat)
                     {
                         SendAttackSwingNotInRange();
@@ -12826,10 +12826,10 @@ void Player::RewardQuest(Quest const *pQuest, uint32 reward, Object* questGiver,
     switch (questGiver->GetTypeId())
     {
         case TYPEID_UNIT:
-            handled = sScriptMgr.OnQuestRewarded(this, (Creature*)questGiver, pQuest);
+            handled = sOldScriptMgr.OnQuestRewarded(this, (Creature*)questGiver, pQuest);
             break;
         case TYPEID_GAMEOBJECT:
-            handled = sScriptMgr.OnQuestRewarded(this, (GameObject*)questGiver, pQuest);
+            handled = sOldScriptMgr.OnQuestRewarded(this, (GameObject*)questGiver, pQuest);
             break;
     }
 

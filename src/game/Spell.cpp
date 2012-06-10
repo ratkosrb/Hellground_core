@@ -2137,7 +2137,7 @@ void Spell::SetTargetMap(uint32 i, uint32 cur)
             }
         }
 
-        sScriptMgr.OnSpellSetTargetMap(m_caster, unitList, m_targets, m_spellInfo, i);
+        sOldScriptMgr.OnSpellSetTargetMap(m_caster, unitList, m_targets, m_spellInfo, i);
 
         if (!unitList.empty())
         {
@@ -3655,7 +3655,7 @@ void Spell::HandleEffects(Unit *pUnitTarget,Item *pItemTarget,GameObject *pGOTar
 
     if (eff < TOTAL_SPELL_EFFECTS)
     {
-        if (!sScriptMgr.OnSpellHandleEffect(m_caster, unitTarget, itemTarget, gameObjTarget, m_spellInfo, i))
+        if (!sOldScriptMgr.OnSpellHandleEffect(m_caster, unitTarget, itemTarget, gameObjTarget, m_spellInfo, i))
             (*this.*SpellEffects[eff])(i);
     }
 }

@@ -2449,7 +2449,7 @@ void InstanceMap::CreateInstanceData(bool load)
     if (mInstance)
     {
         i_script_id = mInstance->script_id;
-        i_data = sScriptMgr.CreateInstanceData(this);
+        i_data = sOldScriptMgr.CreateInstanceData(this);
     }
 
     if (!i_data)
@@ -2467,7 +2467,7 @@ void InstanceMap::CreateInstanceData(bool load)
             const char* data = fields[0].GetString();
             if (data && data != "")
             {
-                sLog.outDebug("Loading instance data for `%s` with id %u", sScriptMgr.GetScriptName(i_script_id), i_InstanceId);
+                sLog.outDebug("Loading instance data for `%s` with id %u", sOldScriptMgr.GetScriptName(i_script_id), i_InstanceId);
                 i_data->Load(data);
             }
         }

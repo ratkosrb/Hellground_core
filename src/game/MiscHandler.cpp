@@ -131,11 +131,11 @@ void WorldSession::HandleGossipSelectOptionOpcode(WorldPacket & recv_data)
 
     if (unit)
     {
-        if (!sScriptMgr.OnGossipSelect(_player, unit, sender, action, code.empty() ? NULL : code.c_str()))
+        if (!sOldScriptMgr.OnGossipSelect(_player, unit, sender, action, code.empty() ? NULL : code.c_str()))
             unit->OnGossipSelect(_player, option);
     }
     else
-        sScriptMgr.OnGossipSelect(_player, go, sender, action, code.empty() ? NULL : code.c_str());
+        sOldScriptMgr.OnGossipSelect(_player, go, sender, action, code.empty() ? NULL : code.c_str());
 }
 
 void WorldSession::HandleWhoOpcode(WorldPacket & recv_data)
@@ -891,7 +891,7 @@ void WorldSession::HandleAreaTriggerOpcode(WorldPacket & recv_data)
         }
     }
 
-    if (sScriptMgr.OnAreaTrigger(GetPlayer(), atEntry))
+    if (sOldScriptMgr.OnAreaTrigger(GetPlayer(), atEntry))
         return;
 
     uint32 quest_id = sObjectMgr.GetQuestForAreaTrigger(Trigger_ID);
@@ -1010,7 +1010,7 @@ void WorldSession::HandleCompleteCinema(WorldPacket & recv_data)
 
     GetPlayer()->setWatchingCinematic(NULL);
 
-    if (sScriptMgr.OnCompletedCinematic(GetPlayer(), cinematic))
+    if (sOldScriptMgr.OnCompletedCinematic(GetPlayer(), cinematic))
         return;
 }
 

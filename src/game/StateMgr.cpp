@@ -38,7 +38,7 @@ static const class staticActionInfo
         actionInfo[UNIT_ACTION_ASSISTANCE](UNIT_ACTION_PRIORITY_ASSISTANCE,ACTION_TYPE_NONRESTOREABLE);
         actionInfo[UNIT_ACTION_CONTROLLED](UNIT_ACTION_PRIORITY_CONTROLLED);
         actionInfo[UNIT_ACTION_CONFUSED](UNIT_ACTION_PRIORITY_CONFUSED);
-        actionInfo[UNIT_ACTION_FEARED]( UNIT_ACTION_PRIORITY_FEARED);
+        actionInfo[UNIT_ACTION_FEARED](UNIT_ACTION_PRIORITY_FEARED);
         actionInfo[UNIT_ACTION_ROOT](UNIT_ACTION_PRIORITY_ROOT);
         actionInfo[UNIT_ACTION_STUN](UNIT_ACTION_PRIORITY_STUN);
         actionInfo[UNIT_ACTION_FEIGNDEATH](UNIT_ACTION_PRIORITY_FEIGNDEATH);
@@ -614,10 +614,8 @@ void ActionInfo::Initialize(UnitStateMgr* mgr)
         AddFlag(ACTION_STATE_INITIALIZED);
     }
     else if (Action())
-    {
         Action()->Reset(*mgr->GetOwner());
-        RemoveFlag(ACTION_STATE_INTERRUPTED);
-    }
+
     RemoveFlag(ACTION_STATE_INTERRUPTED);
 }
 

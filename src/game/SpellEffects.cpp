@@ -2353,11 +2353,11 @@ void Spell::EffectDummy(uint32 i)
     // Script based implementation. Must be used only for not good for implementation in core spell effects
     // So called only for not proccessed cases
     if (gameObjTarget)
-        sScriptMgr.OnEffectDummy(m_caster, m_spellInfo->Id, i, gameObjTarget);
+        sOldScriptMgr.OnEffectDummy(m_caster, m_spellInfo->Id, i, gameObjTarget);
     else if (unitTarget && unitTarget->GetTypeId() == TYPEID_UNIT)
-        sScriptMgr.OnEffectDummy(m_caster, m_spellInfo->Id, i, (Creature*)unitTarget);
+        sOldScriptMgr.OnEffectDummy(m_caster, m_spellInfo->Id, i, (Creature*)unitTarget);
     else if (itemTarget)
-        sScriptMgr.OnEffectDummy(m_caster, m_spellInfo->Id, i, itemTarget);
+        sOldScriptMgr.OnEffectDummy(m_caster, m_spellInfo->Id, i, itemTarget);
 }
 
 void Spell::EffectTriggerSpellWithValue(uint32 i)
@@ -3148,7 +3148,7 @@ void Spell::EffectSendEvent(uint32 EffectIndex)
         }
     }
     sLog.outDebug("Spell ScriptStart %u for spellid %u in EffectSendEvent ", m_spellInfo->EffectMiscValue[EffectIndex], m_spellInfo->Id);
-    if (!sScriptMgr.OnProcessEvent(m_spellInfo->EffectMiscValue[EffectIndex], m_caster, focusObject, true))
+    if (!sOldScriptMgr.OnProcessEvent(m_spellInfo->EffectMiscValue[EffectIndex], m_caster, focusObject, true))
         m_caster->GetMap()->ScriptsStart(sEventScripts, m_spellInfo->EffectMiscValue[EffectIndex], m_caster, focusObject);
 }
 

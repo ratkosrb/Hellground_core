@@ -36,7 +36,7 @@ namespace FactorySelector
 
         //script name in db
         if ((!creature->isPet() || !((Pet*)creature)->isControlled()) && !creature->isCharmed())
-            if (CreatureAI* scriptedAI = sScriptMgr.GetCreatureAI(creature))
+            if (CreatureAI* scriptedAI = sOldScriptMgr.GetCreatureAI(creature))
                 return scriptedAI;
 
         // AIname in db

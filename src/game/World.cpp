@@ -1194,7 +1194,7 @@ void World::SetInitialWorldSettings()
     DetectDBCLang();
 
     sLog.outString("Loading Script Names...");
-    sScriptMgr.LoadScriptNames();
+    sOldScriptMgr.LoadScriptNames();
 
     sLog.outString("Loading InstanceTemplate");
     sObjectMgr.LoadInstanceTemplate();
@@ -1334,16 +1334,16 @@ void World::SetInitialWorldSettings()
     sObjectMgr.LoadTavernAreaTriggers();
 
     sLog.outString("Loading AreaTrigger script names...");
-    sScriptMgr.LoadAreaTriggerScripts();
+    sOldScriptMgr.LoadAreaTriggerScripts();
 
     sLog.outString("Loading CompletedCinematic script names...");
-    sScriptMgr.LoadCompletedCinematicScripts();
+    sOldScriptMgr.LoadCompletedCinematicScripts();
 
     sLog.outString("Loading event id script names...");
-    sScriptMgr.LoadEventIdScripts();
+    sOldScriptMgr.LoadEventIdScripts();
 
     sLog.outString("Loading spell id script names...");
-    sScriptMgr.LoadSpellIdScripts();
+    sOldScriptMgr.LoadSpellIdScripts();
 
     sLog.outString("Loading Graveyard-zone links...");
     sObjectMgr.LoadGraveyardZones();
@@ -1452,15 +1452,15 @@ void World::SetInitialWorldSettings()
 
     ///- Load and initialize scripts
     sLog.outString("Loading Scripts...");
-    sScriptMgr.LoadQuestStartScripts();                         // must be after load Creature/Gameobject(Template/Data) and QuestTemplate
-    sScriptMgr.LoadQuestEndScripts();                           // must be after load Creature/Gameobject(Template/Data) and QuestTemplate
-    sScriptMgr.LoadSpellScripts();                              // must be after load Creature/Gameobject(Template/Data)
-    sScriptMgr.LoadGameObjectScripts();                         // must be after load Creature/Gameobject(Template/Data)
-    sScriptMgr.LoadEventScripts();                              // must be after load Creature/Gameobject(Template/Data)
-    sScriptMgr.LoadWaypointScripts();
+    sOldScriptMgr.LoadQuestStartScripts();                         // must be after load Creature/Gameobject(Template/Data) and QuestTemplate
+    sOldScriptMgr.LoadQuestEndScripts();                           // must be after load Creature/Gameobject(Template/Data) and QuestTemplate
+    sOldScriptMgr.LoadSpellScripts();                              // must be after load Creature/Gameobject(Template/Data)
+    sOldScriptMgr.LoadGameObjectScripts();                         // must be after load Creature/Gameobject(Template/Data)
+    sOldScriptMgr.LoadEventScripts();                              // must be after load Creature/Gameobject(Template/Data)
+    sOldScriptMgr.LoadWaypointScripts();
 
     sLog.outString("Loading Scripts text locales...");    // must be after Load*Scripts calls
-    sScriptMgr.LoadDbScriptStrings();
+    sOldScriptMgr.LoadDbScriptStrings();
 
     sLog.outString("Loading CreatureEventAI Texts...");
     sCreatureEAIMgr.LoadCreatureEventAI_Texts(false);       // false, will checked in LoadCreatureEventAI_Scripts
@@ -1475,7 +1475,7 @@ void World::SetInitialWorldSettings()
     sTerrainMgr.LoadTerrainSpecifics();
 
     sLog.outString("Initializing Scripts...");
-    sScriptMgr.LoadScriptLibrary(HELLGROUND_SCRIPT_NAME);
+    sOldScriptMgr.LoadScriptLibrary(HELLGROUND_SCRIPT_NAME);
 
     ///- Initialize game time and timers
     sLog.outDebug("DEBUG:: Initialize game time and timers");

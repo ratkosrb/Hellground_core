@@ -356,13 +356,16 @@
     <ClCompile Include="..\..\src\game\movement\packet_builder.cpp" />
     <ClCompile Include="..\..\src\game\movement\spline.cpp" />
     <ClCompile Include="..\..\src\game\movement\util.cpp" />
+    <ClCompile Include="..\..\src\game\NScriptMgr.cpp" />
     <ClCompile Include="..\..\src\game\pchdef.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release_PCH|Win32'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\src\game\PoolManager.cpp" />
     <ClCompile Include="..\..\src\game\QuestDef.cpp" />
     <ClCompile Include="..\..\src\game\ReputationMgr.cpp" />
+    <ClCompile Include="..\..\src\game\ScriptLoader.cpp" />
     <ClCompile Include="..\..\src\game\ScriptMgr.cpp" />
+    <ClCompile Include="..\..\src\game\spell_example.cpp" />
     <ClCompile Include="..\..\src\game\StateMgr.cpp" />
     <ClCompile Include="..\..\src\game\UpdateData.cpp" />
     <ClCompile Include="..\..\src\game\vmap\BIH.cpp" />
@@ -530,12 +533,15 @@
     <ClInclude Include="..\..\src\game\movement\spline.h" />
     <ClInclude Include="..\..\src\game\movement\spline.impl.h" />
     <ClInclude Include="..\..\src\game\movement\typedefs.h" />
+    <ClInclude Include="..\..\src\game\NScriptMgr.h" />
     <ClInclude Include="..\..\src\game\OutdoorPvPImpl.h" />
     <ClInclude Include="..\..\src\game\pchdef.h" />
     <ClInclude Include="..\..\src\game\PoolManager.h" />
     <ClInclude Include="..\..\src\game\QuestDef.h" />
     <ClInclude Include="..\..\src\game\ReputationMgr.h" />
+    <ClInclude Include="..\..\src\game\ScriptLoader.h" />
     <ClInclude Include="..\..\src\game\ScriptMgr.h" />
+    <ClInclude Include="..\..\src\game\SpellScript.h" />
     <ClInclude Include="..\..\src\game\StateMgr.h" />
     <ClInclude Include="..\..\src\game\StateMgrImpl.h" />
     <ClInclude Include="..\..\src\game\UpdateData.h" />
