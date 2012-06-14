@@ -27,6 +27,9 @@
 
 #include "MapManager.h"
 
+#include <ace/Singleton.h>
+#include <ace/Null_Mutex.h>
+
 #include <map>
 #include <vector>
 
@@ -62,30 +65,48 @@ enum PermissionTypes
     NONE_PERMISSION          = 4
 };
 
+enum LootableType
+{
+    CREATURE = 0,
+    CREATURE_SKINNING = 1
+};
+
 class WorldObject;
 class Player;
 class LootStore;
 
+struct Loot;
+class LootTemplate;
+class LootGroupTemplate;
+class LootConditionTemplate;
+
 struct LootStoreItem
 {
     uint32  itemid;                                         // id of the item
-    float   chance;                                         // always positive, chance to drop for both quest and non-quest items, chance to be used for refs
-    int32   mincountOrRef;                                  // mincount for drop items (positive) or minus referenced TemplateleId (negative)
-    uint8   group       :8;
-    uint8   maxcount    :8;                                 // max drop count for the item (mincountOrRef positive) or Ref multiplicator (mincountOrRef negative)
+    float   chance;
+    uint8   minCount    :8;
+    uint8   maxCount    :8;                                 // max drop count for the item (mincountOrRef positive) or Ref multiplicator (mincountOrRef negative)
     uint16  conditionId :16;                                // additional loot condition Id
-    bool    needs_quest :1;                                 // quest drop (negative ChanceOrQuestChance in DB)
+    bool    isQuest     :1;
 
-    // Constructor, converting ChanceOrQuestChance -> (chance, needs_quest)
     // displayid is filled in IsValid() which must be called after
-    LootStoreItem(uint32 _itemid, float _chanceOrQuestChance, int8 _group, uint8 _conditionId, int32 _mincountOrRef, uint8 _maxcount)
-        : itemid(_itemid), chance(fabs(_chanceOrQuestChance)), mincountOrRef(_mincountOrRef),
-        group(_group), maxcount(_maxcount), conditionId(_conditionId),
-        needs_quest(_chanceOrQuestChance < 0) {}
+    LootStoreItem(uint32 _itemid, bool _isQuest, float _chance, uint8 _minCount, uint8 _maxCount, uint16 _conditionId)
+        : itemid(_itemid), chance(_chance), minCount(_minCount), maxCount(_maxCount), conditionId(_conditionId) {}
 
     bool Roll() const;                                      // Checks if the entry takes it's chance (at loot generation)
-    bool IsValid(LootStore const& store, uint32 entry) const;
-                                                            // Checks correctness of values
+};
+
+struct LootStoreGroup
+{
+    LootGroupTemplate* group;                                        
+    float              chance;
+    uint8              minCount    :8;
+    uint8              maxCount    :8;        
+
+    LootStoreGroup(LootGroupTemplate *_group, float _chance, uint8 _minCount, uint8 _maxCount)
+        : group(_group), chance(_chance), minCount(_minCount), maxCount(_maxCount) {}
+
+    bool Roll() const;
 };
 
 struct LootItem
@@ -123,69 +144,91 @@ struct QuestItem
         : index(_index), is_looted(_islooted) {}
 };
 
-struct Loot;
-class LootTemplate;
-
 typedef std::vector<QuestItem> QuestItemList;
 typedef std::map<uint32, QuestItemList *> QuestItemMap;
 typedef std::vector<LootStoreItem> LootStoreItemList;
-typedef UNORDERED_MAP<uint32, LootTemplate*> LootTemplateMap;
 
-typedef std::set<uint32> LootIdSet;
+typedef UNORDERED_MAP<uint32, LootTemplate*> LootTemplateMap;
+typedef UNORDERED_MAP<uint32, LootGroupTemplate*> LootGroupMap;
+typedef std::pair<LootableType, uint32> LootableObject;
+typedef UNORDERED_MAP<LootableObject, LootTemplate*> LootableObjectMap;
+
+typedef std::set<LootableObject> LootIdSet;
 
 class LootStore
 {
     public:
-        explicit LootStore(char const* name, char const* entryName) : m_name(name), m_entryName(entryName) {}
+        explicit LootStore() {}
         virtual ~LootStore() { Clear(); }
 
         void Verify() const;
 
         void LoadAndCollectLootIds(LootIdSet& ids_set);
-        void CheckLootRefs(LootIdSet* ref_set = NULL) const;// check existence reference and remove it from ref_set
-        void ReportUnusedIds(LootIdSet const& ids_set) const;
-        void ReportNotExistedId(uint32 id) const;
 
         bool HaveLootfor (uint32 loot_id) const { return m_LootTemplates.find(loot_id) != m_LootTemplates.end(); }
         bool HaveQuestLootfor (uint32 loot_id) const;
         bool HaveQuestLootForPlayer(uint32 loot_id,Player* player) const;
 
         LootTemplate const* GetLootfor (uint32 loot_id) const;
-
-        char const* GetName() const { return m_name; }
-        char const* GetEntryName() const { return m_entryName; }
     protected:
         void LoadLootTable();
+        void LoadLootTypeTable();
+        void LoadLootGroupTable();
+
         void Clear();
     private:
+        LootableObjectMap m_LootableObjects;
         LootTemplateMap m_LootTemplates;
-        char const* m_name;
-        char const* m_entryName;
+        LootGroupMap m_Groups;
 };
+
+class LootGroupTemplate                               // A set of loot definitions for items (refs are not allowed)
+{
+    public:
+        void AddEntry(LootStoreItem& item);                 // Adds an entry to the group (at loading stage)
+        bool HasQuestDrop() const;                          // True if group includes at least 1 quest drop entry
+        bool HasQuestDropForPlayer(Player const * player) const;
+                                                            // The same for active quests of the player
+        void Process(Loot& loot) const;                     // Rolls an item from the group (if any) and adds the item to the loot
+        float RawTotalChance() const;                       // Overall chance for the group (without equal chanced items)
+        float TotalChance() const;                          // Overall chance for the group
+
+        void Verify(LootStore const& lootstore, uint32 id, uint32 group_id) const;
+        void CollectLootIds(LootIdSet& set) const;
+        void CheckLootRefs(LootTemplateMap const& store, LootIdSet* ref_set) const;
+    private:
+        LootStoreItemList ExplicitlyChanced;                // Entries with chances defined in DB
+        LootStoreItemList EqualChanced;                     // Zero chances - every entry takes the same chance
+
+        LootStoreItem const * Roll(std::set<uint32> &except) const;                 // Rolls an item from the group, returns NULL if all miss their chances
+};
+
+typedef std::vector<LootStoreGroup> LootGroups;
 
 class LootTemplate
 {
-    class  LootGroup;                                       // A set of loot definitions for items (refs are not allowed inside)
-    typedef std::vector<LootGroup> LootGroups;
-
     public:
         // Adds an entry to the group (at loading stage)
-        void AddEntry(LootStoreItem& item);
+        void AddEntry(LootStoreGroup &group);
+
         // Rolls for every item in the template and adds the rolled items the the loot
-        void Process(Loot& loot, LootStore const& store, uint8 GroupId = 0) const;
+        void Process(Loot& loot) const;
 
         // True if template includes at least 1 quest drop entry
-        bool HasQuestDrop(LootTemplateMap const& store, uint8 GroupId = 0) const;
+        bool HasQuestDrop() const;
         // True if template includes at least 1 quest drop for an active quest of the player
-        bool HasQuestDropForPlayer(LootTemplateMap const& store, Player const * player, uint8 GroupId = 0) const;
+        bool HasQuestDropForPlayer(Player const * player) const;
 
         // Checks integrity of the template
         void Verify(LootStore const& store, uint32 Id) const;
         void CheckLootRefs(LootTemplateMap const& store, LootIdSet* ref_set) const;
     private:
-        LootStoreItemList Entries;                          // not grouped only
         LootGroups        Groups;                           // groups have own (optimised) processing, grouped entries go there
+        bool m_hasQuestDrop;
+
 };
+
+
 
 //=====================================================
 
@@ -286,7 +329,7 @@ struct Loot
     void RemoveLooter(uint64 GUID) { PlayersLooting.erase(GUID); }
 
     void generateMoneyLoot(uint32 minAmount, uint32 maxAmount);
-    void FillLoot(uint32 loot_id, LootStore const& store, Player* loot_owner, bool personal);
+    void FillLoot(LootableObject lootableObject, Player* loot_owner, bool personal);
 
     void saveLootToDB(Player *owner);
 
@@ -339,6 +382,8 @@ struct LootView
     LootView(Loot &_loot, Player *_viewer,PermissionTypes _permission = ALL_PERMISSION)
         : loot(_loot), viewer(_viewer), permission(_permission) {}
 };
+
+#define sLootStore (*ACE_Singleton<LootStore, ACE_Null_Mutex>::instance())
 
 extern LootStore LootTemplates_Creature;
 extern LootStore LootTemplates_Fishing;
