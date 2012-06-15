@@ -27,5 +27,5 @@ class spell_example : SpellScript
 
 void ScriptLoader::RegisterExampleSpellScripts()
 {
-    ScriptLoader::Register("spell_example", &spell_example::GetSpellScript);
+    REGISTERSPELLSCRIPT(spell_example, 36177/*, otherid, otherid, otherid*/)
 }

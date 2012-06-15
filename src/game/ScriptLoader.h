@@ -26,7 +26,8 @@ namespace ScriptLoader
     void RegisterExampleSpellScripts();
 
     /* */
-    void Register(const std::string&, ScriptPtr);
+    void Register(ScriptPtr, uint32*, uint8 count);
 }
 
+#define REGISTERSPELLSCRIPT(a, ...) { uint32 arr[] = {__VA_ARGS__}; ScriptLoader::Register(&a::GetSpellScript, arr, sizeof(arr)/sizeof(uint32)); }
 #endif

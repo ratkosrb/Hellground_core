@@ -20,14 +20,14 @@
 
 #include "SpellScript.h"
 
-void NScriptMgr::RegisterScript(const std::string& scriptName, ScriptPtr p)
+void NScriptMgr::RegisterScript(uint32 spellId, ScriptPtr p)
 {
-    _spellScripts.insert(std::make_pair<std::string, ScriptPtr >(scriptName, p));
+    _spellScripts.insert(std::make_pair<uint32, ScriptPtr >(spellId, p));
 }
 
-SpellScript* NScriptMgr::GetSpellScript(const std::string& scriptName)
+SpellScript* NScriptMgr::GetSpellScript(uint32 spellId)
 {
-    SpellScriptMap::iterator i = _spellScripts.find(scriptName);
+    SpellScriptMap::iterator i = _spellScripts.find(spellId);
     if (i != _spellScripts.end())
         return (*i->second)();
 

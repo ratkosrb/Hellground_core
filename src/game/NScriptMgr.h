@@ -28,7 +28,7 @@
 class SpellScript;
 
 typedef SpellScript* (*ScriptPtr)();
-typedef std::map<std::string, ScriptPtr> SpellScriptMap;
+typedef std::map<uint32, ScriptPtr> SpellScriptMap;
 
 class NScriptMgr
 {
@@ -37,8 +37,8 @@ class NScriptMgr
     public:
         void LoadSpellScripts();
 
-        SpellScript* GetSpellScript(const std::string&);
-        void RegisterScript(const std::string&, ScriptPtr);
+        SpellScript* GetSpellScript(uint32);
+        void RegisterScript(uint32, ScriptPtr);
 
     private:
         SpellScriptMap _spellScripts;

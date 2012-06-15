@@ -18,9 +18,10 @@
 
 #include "ScriptLoader.h"
 
-void ScriptLoader::Register(const std::string& name, ScriptPtr ptr)
+void ScriptLoader::Register(ScriptPtr p, uint32* spells, uint8 count)
 {
-    sScriptMgr.RegisterScript(name, ptr);
+    for (uint8 i = 0; i < count; ++i)
+        sScriptMgr.RegisterScript(*(spells+i), p);
 }
 
 void NScriptMgr::LoadSpellScripts()
