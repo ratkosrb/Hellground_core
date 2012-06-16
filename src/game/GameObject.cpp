@@ -520,11 +520,11 @@ void GameObject::getFishLoot(Loot *fishloot, Player* loot_owner)
     uint32 subzone = GetAreaId();
 
     // if subzone loot exist use it
-    if (LootTemplates_Fishing.HaveLootfor (subzone))
-        fishloot->FillLoot(subzone, LootTemplates_Fishing, loot_owner,true);
+    if (sLootStore.HaveLootfor (LOOT_TYPE_FISHING, subzone))
+        fishloot->FillLoot(LOOT_TYPE_FISHING, subzone, loot_owner,true);
     // else use zone loot
     else
-        fishloot->FillLoot(GetZoneId(), LootTemplates_Fishing, loot_owner,true);
+        fishloot->FillLoot(LOOT_TYPE_FISHING, GetZoneId(), loot_owner,true);
 }
 
 void GameObject::SaveToDB()
@@ -871,7 +871,7 @@ bool GameObject::ActivateToQuest(Player *pTarget)const
                 if (BattleGround *bg = pTarget->GetBattleGround())
                     if (bg->GetTypeID() == BATTLEGROUND_AV && !(((BattleGroundAV*)bg)->PlayerCanDoMineQuest(GetEntry(),pTarget->GetTeam())))
                         return false;
-            return LootTemplates_Gameobject.HaveQuestLootForPlayer(GetLootId(), pTarget);
+            return sLootStore.HaveQuestLootForPlayer(LOOT_TYPE_GAMEOBJECT, GetLootId(), pTarget);
         }
         case GAMEOBJECT_TYPE_GOOBER:
         {

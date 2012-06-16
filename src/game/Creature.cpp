@@ -1735,7 +1735,7 @@ void Creature::setDeathState(DeathState s)
         setActive(false, ACTIVE_BY_ALL);
 
         if (!isPet() && GetCreatureInfo()->SkinLootId)
-            if (LootTemplates_Skinning.HaveLootfor (GetCreatureInfo()->SkinLootId))
+            if (sLootStore.HaveLootfor (LOOT_TYPE_CREATURE_SKINNING, GetEntry()))
                 SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SKINNABLE);
 
         if (CanFly())

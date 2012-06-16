@@ -12184,10 +12184,10 @@ void Unit::Kill(Unit *pVictim, bool durabilityLoss)
         {
             cVictim->loot.clear();
 
-            if (uint32 lootid = cVictim->GetCreatureInfo()->lootid)
+            if (sLootStore.HaveLootfor(LOOT_TYPE_CREATURE, cVictim->GetEntry()))
             {
                 cVictim->loot.setCreatureGUID(cVictim);
-                cVictim->loot.FillLoot(lootid, LootTemplates_Creature, cVictim->GetLootRecipient(), false);
+                cVictim->loot.FillLoot(LOOT_TYPE_CREATURE, cVictim->GetEntry(), cVictim->GetLootRecipient(), false);
             }
 
             cVictim->loot.generateMoneyLoot(cVictim->GetCreatureInfo()->mingold, cVictim->GetCreatureInfo()->maxgold);

@@ -293,92 +293,27 @@ bool ChatHandler::HandleReloadQuestTemplateCommand(const char*)
     return true;
 }
 
-bool ChatHandler::HandleReloadLootTemplatesCreatureCommand(const char*)
+bool ChatHandler::HandleReloadLootTypeTemplatesCommand(const char*)
 {
-    sLog.outString("Re-Loading Loot Tables... (`creature_loot_template`)");
-    LoadLootTemplates_Creature();
-    LootTemplates_Creature.CheckLootRefs();
-    SendGlobalGMSysMessage("DB table `creature_loot_template` reloaded.");
+    sLog.outString("Re-Loading loot_type_template Table...");
+    LoadLootTypeTemplates();
+    SendGlobalGMSysMessage("DB table `loot_type_template` reloaded.");
     return true;
 }
 
-bool ChatHandler::HandleReloadLootTemplatesDisenchantCommand(const char*)
+bool ChatHandler::HandleReloadLootGroupTemplatesCommand(const char*)
 {
-    sLog.outString("Re-Loading Loot Tables... (`disenchant_loot_template`)");
-    LoadLootTemplates_Disenchant();
-    LootTemplates_Disenchant.CheckLootRefs();
-    SendGlobalGMSysMessage("DB table `disenchant_loot_template` reloaded.");
+    sLog.outString("Re-Loading loot_group_template Table...");
+    LoadLootGroupTemplates();
+    SendGlobalGMSysMessage("DB table `loot_group_template` reloaded.");
     return true;
 }
 
-bool ChatHandler::HandleReloadLootTemplatesFishingCommand(const char*)
+bool ChatHandler::HandleReloadLootTemplatesCommand(const char*)
 {
-    sLog.outString("Re-Loading Loot Tables... (`fishing_loot_template`)");
-    LoadLootTemplates_Fishing();
-    LootTemplates_Fishing.CheckLootRefs();
-    SendGlobalGMSysMessage("DB table `fishing_loot_template` reloaded.");
-    return true;
-}
-
-bool ChatHandler::HandleReloadLootTemplatesGameobjectCommand(const char*)
-{
-    sLog.outString("Re-Loading Loot Tables... (`gameobject_loot_template`)");
-    LoadLootTemplates_Gameobject();
-    LootTemplates_Gameobject.CheckLootRefs();
-    SendGlobalGMSysMessage("DB table `gameobject_loot_template` reloaded.");
-    return true;
-}
-
-bool ChatHandler::HandleReloadLootTemplatesItemCommand(const char*)
-{
-    sLog.outString("Re-Loading Loot Tables... (`item_loot_template`)");
-    LoadLootTemplates_Item();
-    LootTemplates_Item.CheckLootRefs();
-    SendGlobalGMSysMessage("DB table `item_loot_template` reloaded.");
-    return true;
-}
-
-bool ChatHandler::HandleReloadLootTemplatesPickpocketingCommand(const char*)
-{
-    sLog.outString("Re-Loading Loot Tables... (`pickpocketing_loot_template`)");
-    LoadLootTemplates_Pickpocketing();
-    LootTemplates_Pickpocketing.CheckLootRefs();
-    SendGlobalGMSysMessage("DB table `pickpocketing_loot_template` reloaded.");
-    return true;
-}
-
-bool ChatHandler::HandleReloadLootTemplatesProspectingCommand(const char*)
-{
-    sLog.outString("Re-Loading Loot Tables... (`prospecting_loot_template`)");
-    LoadLootTemplates_Prospecting();
-    LootTemplates_Prospecting.CheckLootRefs();
-    SendGlobalGMSysMessage("DB table `prospecting_loot_template` reloaded.");
-    return true;
-}
-
-bool ChatHandler::HandleReloadLootTemplatesQuestMailCommand(const char*)
-{
-    sLog.outString("Re-Loading Loot Tables... (`quest_mail_loot_template`)");
-    LoadLootTemplates_QuestMail();
-    LootTemplates_QuestMail.CheckLootRefs();
-    SendGlobalGMSysMessage("DB table `quest_mail_loot_template` reloaded.");
-    return true;
-}
-
-bool ChatHandler::HandleReloadLootTemplatesReferenceCommand(const char*)
-{
-    sLog.outString("Re-Loading Loot Tables... (`reference_loot_template`)");
-    LoadLootTemplates_Reference();
-    SendGlobalGMSysMessage("DB table `reference_loot_template` reloaded.");
-    return true;
-}
-
-bool ChatHandler::HandleReloadLootTemplatesSkinningCommand(const char*)
-{
-    sLog.outString("Re-Loading Loot Tables... (`skinning_loot_template`)");
-    LoadLootTemplates_Skinning();
-    LootTemplates_Skinning.CheckLootRefs();
-    SendGlobalGMSysMessage("DB table `skinning_loot_template` reloaded.");
+    sLog.outString("Re-Loading loot_template Table...");
+    LoadLootTemplates();
+    SendGlobalGMSysMessage("DB table `loot_template` reloaded.");
     return true;
 }
 

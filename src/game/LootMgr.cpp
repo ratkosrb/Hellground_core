@@ -39,7 +39,15 @@ static Rates const qualityToRate[MAX_ITEM_QUALITY] = {
 
 // FIXME: remove from world.h RATE_DROP_ITEM_REFERENCED
 
-//Remove all data and free all memory
+//
+// ----- Loot Store
+//
+
+
+//
+// ----- loading loot definition from database
+//
+
 void LootStore::Clear()
 {
     for (LootableObjectMap::const_iterator itr=m_LootableObjects.begin(); itr != m_LootableObjects.end(); ++itr)
@@ -60,6 +68,10 @@ void LootStore::LoadLootGroupTable()
 {
     LootGroupMap::iterator tab;
     uint32 count = 0;
+
+    for (LootGroupMap::const_iterator itr=m_Groups.begin(); itr != m_Groups.end(); ++itr)
+        delete itr->second;
+    m_Groups.clear();
 
     //                                                       0      1           2         3       4          5          6          7                 8         
     QueryResultAutoPtr result = WorldDatabase.PQuery("SELECT entry, item_entry, is_quest, chance, min_count, max_count, condition, condition_value1, condition_value2 FROM loot_group_template");
@@ -108,7 +120,8 @@ void LootStore::LoadLootGroupTable()
 
         } while (result->NextRow());
 
-        Verify();                                           // Checks validity of the loot store
+        for (LootGroupMap::const_iterator i = m_Groups.begin(); i != m_Groups.end(); i++)
+            i->second->Verify(i->first);
 
         sLog.outString();
         sLog.outString(">> Loaded %u group loot definitions (%d templates)", count, m_Groups.size());
@@ -123,6 +136,10 @@ void LootStore::LoadLootGroupTable()
 void LootStore::LoadLootTable()
 {
     uint32 count = 0;
+
+    for (LootTemplateMap::const_iterator itr=m_LootTemplates.begin(); itr != m_LootTemplates.end(); ++itr)
+        delete itr->second;
+    m_LootTemplates.clear();
 
     //                                                       0      1            2       3          4             
     QueryResultAutoPtr result = WorldDatabase.PQuery("SELECT entry, group_entry, chance, min_count, max_count FROM loot_template");
@@ -180,6 +197,10 @@ void LootStore::LoadLootTypeTable()
 {
     uint32 count = 0;
 
+    for (LootableObjectMap::const_iterator itr=m_LootableObjects.begin(); itr != m_LootableObjects.end(); ++itr)
+        delete itr->second;
+    m_LootableObjects.clear();
+
     //                                                       0           1     2
     QueryResultAutoPtr result = WorldDatabase.PQuery("SELECT loot_entry, type, type_entry FROM loot_type_template");
 
@@ -210,8 +231,6 @@ void LootStore::LoadLootTypeTable()
 
         } while (result->NextRow());
 
-        Verify();                                           // Checks validity of the loot store
-
         sLog.outString();
         sLog.outString(">> Loaded %u loot type definitions", count);
     }
@@ -222,49 +241,37 @@ void LootStore::LoadLootTypeTable()
     }
 }
 
-bool LootStore::HaveQuestLootfor (uint32 loot_id) const
+// --------------------
+
+bool LootStore::HaveQuestLootfor (LootableType type, uint32 entry) const
 {
-    LootTemplateMap::const_iterator itr = m_LootTemplates.find(loot_id);
-    if (itr == m_LootTemplates.end())
+    LootableObjectMap::const_iterator itr = m_LootableObjects.find(LootableObject(type, entry));
+    if (itr == m_LootableObjects.end())
         return false;
 
     // scan loot for quest items
-    return itr->second->HasQuestDrop(m_LootTemplates);
+    return itr->second->HasQuestDrop();
 }
 
-bool LootStore::HaveQuestLootForPlayer(uint32 loot_id,Player* player) const
+bool LootStore::HaveQuestLootForPlayer(LootableType type, uint32 entry, Player* player) const
 {
-    LootTemplateMap::const_iterator tab = m_LootTemplates.find(loot_id);
-    if (tab != m_LootTemplates.end())
-        if (tab->second->HasQuestDropForPlayer(m_LootTemplates, player))
+    LootableObjectMap::const_iterator itr = m_LootableObjects.find(LootableObject(type, entry));
+    if (itr != m_LootableObjects.end())
+        if (itr->second->HasQuestDropForPlayer(player))
             return true;
 
     return false;
 }
-
-LootTemplate const* LootStore::GetLootfor (uint32 loot_id) const
+ 
+LootTemplate const* LootStore::GetLootfor (LootableObject lootableObject) const
 {
-    LootTemplateMap::const_iterator tab = m_LootTemplates.find(loot_id);
+    LootableObjectMap::const_iterator tab = m_LootableObjects.find(lootableObject);
 
-    if (tab == m_LootTemplates.end())
+    if (tab == m_LootableObjects.end())
         return NULL;
 
     return tab->second;
 }
-
-void LootStore::LoadAndCollectLootIds(LootIdSet& ids_set)
-{
-    Clear();    // in case of reload    TODO: reload should be possible for single table, not all 3 of them?
-
-    LoadLootGroupTable();
-    LoadLootTable();
-    LoadLootTypeTable();
-
-
-    for (LootableObjectMap::const_iterator i = m_LootableObjects.begin(); i != m_LootableObjects.end(); ++i)
-        ids_set.insert(i->first);
-}
-
 
 //
 // --------- LootStoreItem ---------
@@ -412,24 +419,24 @@ void Loot::setCreatureGUID(Creature *pCreature)
 }
 
 // Calls processor of corresponding LootTemplate (which handles everything including references)
-void Loot::FillLoot(LootableObject lootableObject, Player* loot_owner, bool personal)
+void Loot::FillLoot(LootableType type, uint32 entry, Player* loot_owner, bool personal)
 {
-    LootTemplate const* tab = sLootStore.GetLootfor(lootableObject);
+    LootTemplate const* tab = sLootStore.GetLootfor(LootableObject(type, entry));
 
     if (!tab)
     {
-        sLog.outErrorDb("Table '%s' loot id #%u used but it doesn't have records.",store.GetName(),loot_id);
+        sLog.outErrorDb("No loot definition for loot type %d with entry %d.", type, entry);
         return;
     }
 
     items.reserve(MAX_NR_LOOT_ITEMS);
     quest_items.reserve(MAX_NR_QUEST_ITEMS);
-    tab->Process(*this, store);                             // Processing is done there, callback via Loot::AddItem()
+    tab->Process(*this);                            // Processing is done there, callback via Loot::AddItem()
 
-    if (loot_owner) // loot_owner not provided for creatures with no loot recipient on death
+    if (loot_owner)                                 // loot_owner not provided for creatures with no loot recipient on death
     {
         // Setting access rights for group loot case
-        Group * pGroup=loot_owner->GetGroup();
+        Group * pGroup = loot_owner->GetGroup();
         if (!personal && pGroup)
         {
             for (GroupReference *itr = pGroup->GetFirstMember(); itr != NULL; itr = itr->next())
@@ -1072,7 +1079,7 @@ ByteBuffer& operator<<(ByteBuffer& b, LootView const& lv)
 }
 
 //
-// --------- LootTemplate::LootGroup ---------
+// --------- LootGroupTemplate ---------
 //
 
 // Adds an entry to the group (at loading stage)
@@ -1193,17 +1200,17 @@ float LootGroupTemplate::TotalChance() const
     return result;
 }
 
-void LootGroupTemplate::Verify(LootStore const& lootstore, uint32 id, uint32 group_id) const
+void LootGroupTemplate::Verify(uint32 group_id) const
 {
     float chance = RawTotalChance();
     if (chance > 101.0f)                                    // TODO: replace with 100% when DBs will be ready
     {
-        sLog.outErrorDb("Table '%s' entry %u group %d has total chance > 100%% (%f)", lootstore.GetName(), id, group_id, chance);
+        sLog.outErrorDb("Group %d has total chance > 100%% (%f)", group_id, chance);
     }
 
     if (chance >= 100.0f && !EqualChanced.empty())
     {
-        sLog.outErrorDb("Table '%s' entry %u group %d has items with chance=0%% but group total chance >= 100%% (%f)", lootstore.GetName(), id, group_id, chance);
+        sLog.outErrorDb("Group %d has items with chance=0%% but group total chance >= 100%% (%f)", group_id, chance);
     }
 }
 
@@ -1223,86 +1230,45 @@ void LootTemplate::Process(Loot& loot) const
     for (LootGroups::const_iterator it = Groups.begin(); it != Groups.end(); ++it)
     {
         if (!it->Roll())
-            continue;                                       // Bad luck for the entry
+            continue;                                       // Bad luck for the group
 
         uint32 count = urand(it->minCount, it->maxCount);
-
-      
         for (uint32 i = 0; i < count; ++i)
             it->group->Process(loot);
     }
 }
 
 // True if template includes at least 1 quest drop entry
-bool LootTemplate::HasQuestDrop(LootTemplateMap const& store, uint8 groupId) const
+bool LootTemplate::HasQuestDrop() const
 {
-    if (groupId)                                            // Group reference
-    {
-        if (groupId > Groups.size())
-            return false;                                   // Error message [should be] already printed at loading stage
-        return Groups[groupId-1].HasQuestDrop();
-    }
-
-    for (LootStoreItemList::const_iterator i = Entries.begin(); i != Entries.end(); ++i)
-    {
-        if (i->mincountOrRef < 0)                           // References
-        {
-            LootTemplateMap::const_iterator Referenced = store.find(-i->mincountOrRef);
-            if (Referenced ==store.end())
-                continue;                                   // Error message [should be] already printed at loading stage
-            if (Referenced->second->HasQuestDrop(store, i->group))
-                return true;
-        }
-        else if (i->needs_quest)
-            return true;                                    // quest drop found
-    }
-
-    // Now processing groups
     for (LootGroups::const_iterator i = Groups.begin() ; i != Groups.end() ; ++i)
-        if (i->HasQuestDrop())
+        if (i->group->HasQuestDrop())
             return true;
 
     return false;
 }
 
 // True if template includes at least 1 quest drop for an active quest of the player
-bool LootTemplate::HasQuestDropForPlayer(LootTemplateMap const& store, Player const* player, uint8 groupId) const
+bool LootTemplate::HasQuestDropForPlayer(Player const* player) const
 {
-    if (groupId)                                            // Group reference
-    {
-        if (groupId > Groups.size())
-            return false;                                   // Error message already printed at loading stage
-        return Groups[groupId-1].HasQuestDropForPlayer(player);
-    }
-
-    // Checking non-grouped entries
-    for (LootStoreItemList::const_iterator i = Entries.begin() ; i != Entries.end() ; ++i)
-    {
-        if (i->mincountOrRef < 0)                           // References processing
-        {
-            LootTemplateMap::const_iterator Referenced = store.find(-i->mincountOrRef);
-            if (Referenced == store.end())
-                continue;                                   // Error message already printed at loading stage
-            if (Referenced->second->HasQuestDropForPlayer(store, player, i->group))
-                return true;
-        }
-        else if (player->HasQuestForItem(i->itemid))
-            return true;                                    // active quest drop found
-    }
-
-    // Now checking groups
     for (LootGroups::const_iterator i = Groups.begin(); i != Groups.end(); ++i)
-        if (i->HasQuestDropForPlayer(player))
+        if (i->group->HasQuestDropForPlayer(player))
             return true;
 
     return false;
 }
 
-
 void LoadLootTemplates()
 {
-    LootIdSet ids_set;
-    sLootStore.LoadAndCollectLootIds(ids_set);
+    sLootStore.LoadLootTable();
+}
 
-    // TODO: make warning if nonexisting lootable objects are in database or
+void LoadLootTypeTemplates()
+{
+    sLootStore.LoadLootTypeTable();
+}
+
+void LoadLootGroupTemplates()
+{
+    sLootStore.LoadLootGroupTable();
 }

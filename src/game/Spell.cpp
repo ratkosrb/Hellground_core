@@ -5048,7 +5048,7 @@ SpellCastResult Spell::CheckItems()
                 if (m_targets.getItemTarget()->GetCount() < 5)
                     return SPELL_FAILED_PROSPECT_NEED_MORE;
 
-                if (!LootTemplates_Prospecting.HaveLootfor (m_targets.getItemTargetEntry()))
+                if (!sLootStore.HaveLootfor (LOOT_TYPE_ITEM_PROSPECTING, m_targets.getItemTargetEntry()))
                     return SPELL_FAILED_CANT_BE_PROSPECTED;
 
                 break;

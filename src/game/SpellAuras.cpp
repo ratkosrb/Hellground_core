@@ -1616,7 +1616,7 @@ void Aura::TriggerSpell()
 
                             Loot *loot = &creature->loot;
                             loot->clear();
-                            loot->FillLoot(creature->GetCreatureInfo()->SkinLootId, LootTemplates_Skinning, player, true);
+                            loot->FillLoot(LOOT_TYPE_CREATURE_SKINNING, creature->GetEntry(), player, true);
                             for (uint8 i=0;i<loot->items.size();i++)
                             {
                                 LootItem *item = loot->LootItemInSlot(i,player);

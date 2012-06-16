@@ -7429,8 +7429,6 @@ void Player::SendLoot(uint64 guid, LootType loot_type)
 
         if (go->getLootState() == GO_READY)
         {
-            uint32 lootid =  go->GetLootId();
-
             //TODO: fix this big hack
             if ((go->GetEntry() == BG_AV_OBJECTID_MINE_N || go->GetEntry() == BG_AV_OBJECTID_MINE_S))
                 if (BattleGround *bg = GetBattleGround())
@@ -7441,11 +7439,10 @@ void Player::SendLoot(uint64 guid, LootType loot_type)
                             return;
                         }
 
-            if (lootid)
+            if (sLootStore.HaveLootfor(LOOT_TYPE_GAMEOBJECT, go->GetEntry()))      // check if loot exists
             {
-                sLog.outDebug("       if (lootid)");
                 loot->clear();
-                loot->FillLoot(lootid, LootTemplates_Gameobject, this, false);
+                loot->FillLoot(LOOT_TYPE_GAMEOBJECT, go->GetEntry(), this, false);
 
                 //if chest apply 2.1.x rules
                 if ((go->GetGoType() == GAMEOBJECT_TYPE_CHEST)&&(go->GetGOInfo()->chest.groupLootRules))
@@ -7485,7 +7482,7 @@ void Player::SendLoot(uint64 guid, LootType loot_type)
             {
                 item->m_lootGenerated = true;
                 loot->clear();
-                loot->FillLoot(item->GetProto()->DisenchantID, LootTemplates_Disenchant, this,true);
+                loot->FillLoot(LOOT_TYPE_ITEM_DISENCHANT, item->GetEntry(), this,true);
             }
         }
         else if (loot_type == LOOT_PROSPECTING)
@@ -7496,7 +7493,7 @@ void Player::SendLoot(uint64 guid, LootType loot_type)
             {
                 item->m_lootGenerated = true;
                 loot->clear();
-                loot->FillLoot(item->GetEntry(), LootTemplates_Prospecting, this,true);
+                loot->FillLoot(LOOT_TYPE_ITEM_PROSPECTING, item->GetEntry(), this,true);
             }
         }
         else
@@ -7507,7 +7504,7 @@ void Player::SendLoot(uint64 guid, LootType loot_type)
             {
                 item->m_lootGenerated = true;
                 loot->clear();
-                loot->FillLoot(item->GetEntry(), LootTemplates_Item, this,true);
+                loot->FillLoot(LOOT_TYPE_ITEM, item->GetEntry(), this,true);
 
                 loot->generateMoneyLoot(item->GetProto()->MinMoneyLoot,item->GetProto()->MaxMoneyLoot);
             }
@@ -7532,7 +7529,7 @@ void Player::SendLoot(uint64 guid, LootType loot_type)
             bones->loot.clear();
             if (BattleGround *bg = GetBattleGround())
                 if (bg->GetTypeID() == BATTLEGROUND_AV)
-                    loot->FillLoot(1, LootTemplates_Creature, this, true);
+                    loot->FillLoot(LOOT_TYPE_CREATURE, 1, this, true);
             // It may need a better formula
             // Now it works like this: lvl10: ~6copper, lvl70: ~9silver
             bones->loot.gold = (uint32)(urand(50, 150) * 0.016f * pow(((float)pLevel)/5.76f, 2.5f) * sWorld.getRate(RATE_DROP_MONEY));
@@ -7568,7 +7565,7 @@ void Player::SendLoot(uint64 guid, LootType loot_type)
                 loot->clear();
 
                 if (uint32 lootid = creature->GetCreatureInfo()->pickpocketLootId)
-                    loot->FillLoot(lootid, LootTemplates_Pickpocketing, this, false);
+                    loot->FillLoot(LOOT_TYPE_CREATURE_PICKPOCKET, creature->GetEntry(), this, false);
 
                 // Generate extra money for pick pocket loot
                 const uint32 a = urand(0, creature->getLevel()/2);
@@ -7601,7 +7598,7 @@ void Player::SendLoot(uint64 guid, LootType loot_type)
             if (loot_type == LOOT_SKINNING)
             {
                 loot->clear();
-                loot->FillLoot(creature->GetCreatureInfo()->SkinLootId, LootTemplates_Skinning, this, false);
+                loot->FillLoot(LOOT_TYPE_CREATURE_SKINNING, creature->GetEntry(), this, false);
             }
             // set group rights only for loot_type != LOOT_SKINNING
             else
@@ -20240,6 +20237,7 @@ void Player::SetTitle(CharTitlesEntry const* title)
     SetFlag(PLAYER__FIELD_KNOWN_TITLES+fieldIndexOffset, flag);
 }
 
+/*
 void Player::AutoStoreLoot(uint8 bag, uint8 slot, uint32 loot_id, LootStore const& store, bool broadcast)
 {
     Loot loot;
@@ -20263,7 +20261,7 @@ void Player::AutoStoreLoot(uint8 bag, uint8 slot, uint32 loot_id, LootStore cons
     Item* pItem = StoreNewItem (dest,lootItem->itemid,true,lootItem->randomPropertyId);
     SendNewItem(pItem, lootItem->count, false, false,broadcast);
 }
-
+*/
 
 /*-----------------------TRINITY--------------------------*/
 bool Player::isTotalImmunity()

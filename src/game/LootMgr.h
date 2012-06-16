@@ -67,8 +67,15 @@ enum PermissionTypes
 
 enum LootableType
 {
-    CREATURE = 0,
-    CREATURE_SKINNING = 1
+    LOOT_TYPE_CREATURE            = 0,
+    LOOT_TYPE_CREATURE_SKINNING   = 1,
+    LOOT_TYPE_CREATURE_PICKPOCKET = 2,
+    LOOT_TYPE_GAMEOBJECT	      = 3,
+    LOOT_TYPE_ITEM	              = 4,
+    LOOT_TYPE_ITEM_PROSPECTING    = 5,
+    LOOT_TYPE_ITEM_DISENCHANT     = 6,
+    LOOT_TYPE_FISHING             = 7,
+    LOOT_TYPE_MAIL                = 8
 };
 
 class WorldObject;
@@ -80,6 +87,8 @@ class LootTemplate;
 class LootGroupTemplate;
 class LootConditionTemplate;
 
+// used for storing loot definition 
+// from table loot_group_template
 struct LootStoreItem
 {
     uint32  itemid;                                         // id of the item
@@ -96,6 +105,8 @@ struct LootStoreItem
     bool Roll() const;                                      // Checks if the entry takes it's chance (at loot generation)
 };
 
+// used for storing loot definition
+// from table loot_template
 struct LootStoreGroup
 {
     LootGroupTemplate* group;                                        
@@ -106,9 +117,10 @@ struct LootStoreGroup
     LootStoreGroup(LootGroupTemplate *_group, float _chance, uint8 _minCount, uint8 _maxCount)
         : group(_group), chance(_chance), minCount(_minCount), maxCount(_maxCount) {}
 
-    bool Roll() const;
+    bool Roll() const { return roll_chance_f(chance); };
 };
 
+// used in generated loot
 struct LootItem
 {
     uint32  itemid;
@@ -132,6 +144,7 @@ struct LootItem
     bool AllowedForPlayer(Player const * player) const;
 };
 
+// used in generated loot
 struct QuestItem
 {
     uint8   index;                                          // position in quest_items;
@@ -151,38 +164,38 @@ typedef std::vector<LootStoreItem> LootStoreItemList;
 typedef UNORDERED_MAP<uint32, LootTemplate*> LootTemplateMap;
 typedef UNORDERED_MAP<uint32, LootGroupTemplate*> LootGroupMap;
 typedef std::pair<LootableType, uint32> LootableObject;
-typedef UNORDERED_MAP<LootableObject, LootTemplate*> LootableObjectMap;
+typedef std::map<LootableObject, LootTemplate*> LootableObjectMap;
 
 typedef std::set<LootableObject> LootIdSet;
 
+// singleton storing all loot definitions from tables loot_type_template, loot_template and loot_group_template
 class LootStore
 {
     public:
         explicit LootStore() {}
         virtual ~LootStore() { Clear(); }
 
-        void Verify() const;
+        // bool HaveLootfor (uint32 loot_id) const { return m_LootTemplates.find(loot_id) != m_LootTemplates.end(); }
+        bool HaveLootfor (LootableType type, uint32 entry) const { return m_LootableObjects.find(LootableObject(type, entry)) != m_LootableObjects.end(); }
+        bool HaveQuestLootfor (LootableType type, uint32 entry) const;
+        bool HaveQuestLootForPlayer(LootableType type, uint32 entry, Player* player) const;
 
-        void LoadAndCollectLootIds(LootIdSet& ids_set);
-
-        bool HaveLootfor (uint32 loot_id) const { return m_LootTemplates.find(loot_id) != m_LootTemplates.end(); }
-        bool HaveQuestLootfor (uint32 loot_id) const;
-        bool HaveQuestLootForPlayer(uint32 loot_id,Player* player) const;
-
-        LootTemplate const* GetLootfor (uint32 loot_id) const;
-    protected:
+        LootTemplate const* GetLootfor (LootableObject lootableObject) const;
+    
         void LoadLootTable();
         void LoadLootTypeTable();
         void LoadLootGroupTable();
-
+    protected:
         void Clear();
+
     private:
-        LootableObjectMap m_LootableObjects;
-        LootTemplateMap m_LootTemplates;
-        LootGroupMap m_Groups;
+        LootableObjectMap m_LootableObjects;    // loot_type_template
+        LootTemplateMap m_LootTemplates;        // loot_template
+        LootGroupMap m_Groups;                  // loot_group_template
 };
 
-class LootGroupTemplate                               // A set of loot definitions for items (refs are not allowed)
+// definition of lootable group (=set of LootStoreItem objects)
+class LootGroupTemplate
 {
     public:
         void AddEntry(LootStoreItem& item);                 // Adds an entry to the group (at loading stage)
@@ -193,7 +206,7 @@ class LootGroupTemplate                               // A set of loot definitio
         float RawTotalChance() const;                       // Overall chance for the group (without equal chanced items)
         float TotalChance() const;                          // Overall chance for the group
 
-        void Verify(LootStore const& lootstore, uint32 id, uint32 group_id) const;
+        void Verify(uint32 group_id) const;
         void CollectLootIds(LootIdSet& set) const;
         void CheckLootRefs(LootTemplateMap const& store, LootIdSet* ref_set) const;
     private:
@@ -205,6 +218,8 @@ class LootGroupTemplate                               // A set of loot definitio
 
 typedef std::vector<LootStoreGroup> LootGroups;
 
+// definition of loot (=set of LootStoreGroup objects)
+// Each LootStoreGroup object points to LootGroupTemple object
 class LootTemplate
 {
     public:
@@ -329,7 +344,7 @@ struct Loot
     void RemoveLooter(uint64 GUID) { PlayersLooting.erase(GUID); }
 
     void generateMoneyLoot(uint32 minAmount, uint32 maxAmount);
-    void FillLoot(LootableObject lootableObject, Player* loot_owner, bool personal);
+    void FillLoot(LootableType type, uint32 entry, Player* loot_owner, bool personal);
 
     void saveLootToDB(Player *owner);
 
@@ -385,39 +400,15 @@ struct LootView
 
 #define sLootStore (*ACE_Singleton<LootStore, ACE_Null_Mutex>::instance())
 
-extern LootStore LootTemplates_Creature;
-extern LootStore LootTemplates_Fishing;
-extern LootStore LootTemplates_Gameobject;
-extern LootStore LootTemplates_Item;
-extern LootStore LootTemplates_Pickpocketing;
-extern LootStore LootTemplates_Skinning;
-extern LootStore LootTemplates_Disenchant;
-extern LootStore LootTemplates_Prospecting;
-extern LootStore LootTemplates_QuestMail;
-
-void LoadLootTemplates_Creature();
-void LoadLootTemplates_Fishing();
-void LoadLootTemplates_Gameobject();
-void LoadLootTemplates_Item();
-void LoadLootTemplates_Pickpocketing();
-void LoadLootTemplates_Skinning();
-void LoadLootTemplates_Disenchant();
-void LoadLootTemplates_Prospecting();
-void LoadLootTemplates_QuestMail();
-void LoadLootTemplates_Reference();
+void LoadLootTemplates();
+void LoadLootTypeTemplates();
+void LoadLootGroupTemplates();
 
 inline void LoadLootTables()
 {
-    LoadLootTemplates_Creature();
-    LoadLootTemplates_Fishing();
-    LoadLootTemplates_Gameobject();
-    LoadLootTemplates_Item();
-    LoadLootTemplates_Pickpocketing();
-    LoadLootTemplates_Skinning();
-    LoadLootTemplates_Disenchant();
-    LoadLootTemplates_Prospecting();
-    LoadLootTemplates_QuestMail();
-    LoadLootTemplates_Reference();
+    void LoadLootTemplates();
+    void LoadLootTypeTemplates();
+    void LoadLootGroupTemplates();
 }
 
 #endif

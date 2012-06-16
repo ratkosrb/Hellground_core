@@ -145,7 +145,7 @@ bool MailDraft::prepareItems(Player* receiver)
     Loot mailLoot;
 
     // can be empty
-    mailLoot.FillLoot(m_mailTemplateId, LootTemplates_QuestMail, receiver, true);
+    mailLoot.FillLoot(LOOT_TYPE_MAIL, m_mailTemplateId, receiver, true);
 
     uint32 max_slot = mailLoot.GetMaxSlotInLootFor(receiver);
     for(uint32 i = 0; m_items.size() < MAX_MAIL_ITEMS && i < max_slot; ++i)
@@ -386,7 +386,7 @@ void Mail::prepareTemplateItems( Player* receiver )
     Loot mailLoot;
 
     // can be empty
-    mailLoot.FillLoot(mailTemplateId, LootTemplates_QuestMail, receiver, true);
+    mailLoot.FillLoot(LOOT_TYPE_MAIL, mailTemplateId, receiver, true);
 
     CharacterDatabase.BeginTransaction();
     CharacterDatabase.PExecute("UPDATE mail SET has_items = 1 WHERE id = %u", messageID);
