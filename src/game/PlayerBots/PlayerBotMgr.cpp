@@ -640,7 +640,11 @@ uint8 SelectRandomRaceForClass(uint8 playerClass, Team playerTeam)
         }
         case CLASS_PALADIN:
         {
-            return urand(0, 1) ? RACE_HUMAN : RACE_DWARF;
+            if (playerTeam == ALLIANCE)
+                return urand(0, 1) ? RACE_HUMAN : RACE_DWARF;
+            else
+                return RACE_BLOODELF;
+            break;
         }
         case CLASS_HUNTER:
         {
@@ -668,7 +672,10 @@ uint8 SelectRandomRaceForClass(uint8 playerClass, Team playerTeam)
         }
         case CLASS_SHAMAN:
         {
-            return PickRandomValue(RACE_ORC, RACE_TAUREN, RACE_TROLL);
+            if (playerTeam == HORDE)
+                return PickRandomValue(RACE_ORC, RACE_TAUREN, RACE_TROLL);
+            else
+                return RACE_DRAENEI;
         }
         case CLASS_MAGE:
         {
@@ -809,7 +816,7 @@ bool ChatHandler::HandlePartyBotAddCommand(const char* args2)
         std::string option = arg1;
         if (option == "warrior")
             botClass = CLASS_WARRIOR;
-        else if (option == "paladin" && pPlayer->GetTeam() == ALLIANCE)
+        else if (option == "paladin")
             botClass = CLASS_PALADIN;
         else if (option == "hunter")
             botClass = CLASS_HUNTER;
@@ -817,7 +824,7 @@ bool ChatHandler::HandlePartyBotAddCommand(const char* args2)
             botClass = CLASS_ROGUE;
         else if (option == "priest")
             botClass = CLASS_PRIEST;
-        else if (option == "shaman" && pPlayer->GetTeam() == HORDE)
+        else if (option == "shaman")
             botClass = CLASS_SHAMAN;
         else if (option == "mage")
             botClass = CLASS_MAGE;
