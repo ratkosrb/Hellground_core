@@ -810,51 +810,51 @@ struct SpellEntry
     {
         switch (EffectImplicitTargetA[eff])
         {
-            case TARGET_DST_HOME:
-            case TARGET_DST_DB:
-            case TARGET_DST_CASTER:
-            case TARGET_DEST_DYNOBJ_ENEMY:
-            case TARGET_DEST_DYNOBJ_ALLY:
-            case TARGET_UNIT_AREA_ALLY_DST:
-            case TARGET_UNIT_AREA_PARTY_DST:
-            case TARGET_DEST_CASTER_RANDOM_UNKNOWN:
-            case TARGET_DEST_CASTER_FRONT_LEFT:
-            case TARGET_DEST_CASTER_BACK_LEFT:
-            case TARGET_DEST_CASTER_BACK_RIGHT:
-            case TARGET_DEST_CASTER_FRONT_RIGHT:
-            case TARGET_DST_NEARBY_ENTRY:
-            case TARGET_DEST_CASTER_FRONT:
-            case TARGET_DEST_CASTER_BACK:
-            case TARGET_DEST_CASTER_RIGHT:
-            case TARGET_DEST_CASTER_LEFT:
-            case TARGET_DST_TARGET_ENEMY:
-            case TARGET_DEST_CASTER_FRONT_LEAP:
-            case TARGET_DEST_TARGET_ANY:
-            case TARGET_DEST_TARGET_FRONT:
-            case TARGET_DEST_TARGET_BACK:
-            case TARGET_DEST_TARGET_RIGHT:
-            case TARGET_DEST_TARGET_LEFT:
-            case TARGET_DEST_TARGET_FRONT_LEFT:
-            case TARGET_DEST_TARGET_BACK_LEFT:
-            case TARGET_DEST_TARGET_BACK_RIGHT:
-            case TARGET_DEST_TARGET_FRONT_RIGHT:
-            case TARGET_DEST_CASTER_RANDOM:
-            case TARGET_DEST_CASTER_RADIUS:
-            case TARGET_DEST_TARGET_RANDOM:
-            case TARGET_DEST_TARGET_RADIUS:
-            case TARGET_DEST_CHANNEL:
-            case TARGET_DEST_DEST_FRONT:
-            case TARGET_DEST_DEST_BACK:
-            case TARGET_DEST_DEST_RIGHT:
-            case TARGET_DEST_DEST_LEFT:
-            case TARGET_DEST_DEST_FRONT_LEFT:
-            case TARGET_DEST_DEST_BACK_LEFT:
-            case TARGET_DEST_DEST_BACK_RIGHT:
-            case TARGET_DEST_DEST_FRONT_RIGHT:
-            case TARGET_DEST_DEST_RANDOM:
-            case TARGET_DEST_DEST:
-            case TARGET_DEST_DYNOBJ_NONE:
-            case TARGET_DEST_TRAJ:
+            case TARGET_LOCATION_CASTER_HOME_BIND:
+            case TARGET_LOCATION_DATABASE:
+            case TARGET_LOCATION_CASTER_DEST:
+            case TARGET_ENUM_UNITS_ENEMY_AOE_AT_DYNOBJ_LOC:
+            case TARGET_ENUM_UNITS_FRIEND_AOE_AT_DYNOBJ_LOC:
+            case TARGET_ENUM_UNITS_FRIEND_AOE_AT_DEST_LOC:
+            case TARGET_ENUM_UNITS_PARTY_AOE_AT_DEST_LOC:
+            case TARGET_ENUM_UNITS_ENEMY_WITHIN_CASTER_RANGE:
+            case TARGET_LOCATION_CASTER_FRONT_RIGHT:
+            case TARGET_LOCATION_CASTER_BACK_RIGHT:
+            case TARGET_LOCATION_CASTER_BACK_LEFT:
+            case TARGET_LOCATION_CASTER_FRONT_LEFT:
+            case TARGET_LOCATION_SCRIPT_NEAR_CASTER:
+            case TARGET_LOCATION_CASTER_FRONT:
+            case TARGET_LOCATION_CASTER_BACK:
+            case TARGET_LOCATION_CASTER_LEFT:
+            case TARGET_LOCATION_CASTER_RIGHT:
+            case TARGET_LOCATION_CASTER_TARGET_POSITION:
+            case TARGET_LOCATION_CASTER_FRONT_LEAP:
+            case TARGET_LOCATION_UNIT_POSITION:
+            case TARGET_LOCATION_UNIT_FRONT:
+            case TARGET_LOCATION_UNIT_BACK:
+            case TARGET_LOCATION_UNIT_RIGHT:
+            case TARGET_LOCATION_UNIT_LEFT:
+            case TARGET_LOCATION_UNIT_FRONT_RIGHT:
+            case TARGET_LOCATION_UNIT_BACK_RIGHT:
+            case TARGET_LOCATION_UNIT_BACK_LEFT:
+            case TARGET_LOCATION_UNIT_FRONT_LEFT:
+            case TARGET_LOCATION_CASTER_RANDOM_SIDE:
+            case TARGET_LOCATION_CASTER_RANDOM_CIRCUMFERENCE:
+            case TARGET_LOCATION_UNIT_RANDOM_SIDE:
+            case TARGET_LOCATION_UNIT_RANDOM_CIRCUMFERENCE:
+            case TARGET_LOCATION_CHANNEL_TARGET_DEST:
+            case TARGET_LOCATION_NORTH:
+            case TARGET_LOCATION_SOUTH:
+            case TARGET_LOCATION_EAST:
+            case TARGET_LOCATION_WEST:
+            case TARGET_LOCATION_NE:
+            case TARGET_LOCATION_NW:
+            case TARGET_LOCATION_SE:
+            case TARGET_LOCATION_SW:
+            case TARGET_LOCATION_RANDOM_SIDE:
+            case TARGET_LOCATION_CURRENT_REFERENCE:
+            case TARGET_ENUM_UNITS_SCRIPT_AOE_AT_DYNOBJ_LOC:
+            case TARGET_LOCATION_TRAJECTORY:
                 return true;
         }
 
@@ -866,8 +866,8 @@ struct SpellEntry
         // check combinations A <> B of implicit targets
         switch (EffectImplicitTargetA[eff])
         {
-            case TARGET_UNIT_NEARBY_ENTRY:
-            case TARGET_DST_NEARBY_ENTRY:
+            case TARGET_UNIT_SCRIPT_NEAR_CASTER:
+            case TARGET_LOCATION_SCRIPT_NEAR_CASTER:
                 return true;
             default:
                 return false;

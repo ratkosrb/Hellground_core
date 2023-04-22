@@ -89,7 +89,7 @@ struct boss_nalorakkAI : public ScriptedAI
         SpellEntry *TempSpell = (SpellEntry*)GetSpellStore()->LookupEntry(SPELL_MANGLE);
         if(TempSpell)
         {
-            TempSpell->EffectImplicitTargetA[1] = TARGET_UNIT_TARGET_ENEMY;
+            TempSpell->EffectImplicitTargetA[1] = TARGET_UNIT_ENEMY;
         }
         wLoc.coord_x = NalorakkWay[7][0];
         wLoc.coord_y = NalorakkWay[7][1];

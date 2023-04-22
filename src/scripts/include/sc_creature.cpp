@@ -872,45 +872,45 @@ void FillSpellSummary()
                 SpellSummary[i].Targets |= 1 << (SELECT_TARGET_SELF-1);
 
             //Spell targets a single enemy
-            if ( TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_TARGET_ENEMY ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_DST_TARGET_ENEMY )
+            if ( TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_ENEMY ||
+                TempSpell->EffectImplicitTargetA[j] == TARGET_LOCATION_CASTER_TARGET_POSITION )
                 SpellSummary[i].Targets |= 1 << (SELECT_TARGET_SINGLE_ENEMY-1);
 
             //Spell targets AoE at enemy
-            if ( TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_AREA_ENEMY_SRC ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_AREA_ENEMY_DST ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_SRC_CASTER ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_DEST_DYNOBJ_ENEMY )
+            if ( TempSpell->EffectImplicitTargetA[j] == TARGET_ENUM_UNITS_ENEMY_AOE_AT_SRC_LOC ||
+                TempSpell->EffectImplicitTargetA[j] == TARGET_ENUM_UNITS_ENEMY_AOE_AT_DEST_LOC ||
+                TempSpell->EffectImplicitTargetA[j] == TARGET_LOCATION_CASTER_SRC ||
+                TempSpell->EffectImplicitTargetA[j] == TARGET_ENUM_UNITS_ENEMY_AOE_AT_DYNOBJ_LOC )
                 SpellSummary[i].Targets |= 1 << (SELECT_TARGET_AOE_ENEMY-1);
 
             //Spell targets an enemy
-            if ( TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_TARGET_ENEMY ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_DST_TARGET_ENEMY ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_AREA_ENEMY_SRC ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_AREA_ENEMY_DST ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_SRC_CASTER ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_DEST_DYNOBJ_ENEMY )
+            if ( TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_ENEMY ||
+                TempSpell->EffectImplicitTargetA[j] == TARGET_LOCATION_CASTER_TARGET_POSITION ||
+                TempSpell->EffectImplicitTargetA[j] == TARGET_ENUM_UNITS_ENEMY_AOE_AT_SRC_LOC ||
+                TempSpell->EffectImplicitTargetA[j] == TARGET_ENUM_UNITS_ENEMY_AOE_AT_DEST_LOC ||
+                TempSpell->EffectImplicitTargetA[j] == TARGET_LOCATION_CASTER_SRC ||
+                TempSpell->EffectImplicitTargetA[j] == TARGET_ENUM_UNITS_ENEMY_AOE_AT_DYNOBJ_LOC )
                 SpellSummary[i].Targets |= 1 << (SELECT_TARGET_ANY_ENEMY-1);
 
             //Spell targets a single friend(or self)
             if ( TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_CASTER ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_TARGET_ALLY ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_TARGET_PARTY )
+                TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_FRIEND ||
+                TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_PARTY )
                 SpellSummary[i].Targets |= 1 << (SELECT_TARGET_SINGLE_FRIEND-1);
 
             //Spell targets aoe friends
-            if ( TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_PARTY_CASTER ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_PARTY_TARGET ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_SRC_CASTER)
+            if ( TempSpell->EffectImplicitTargetA[j] == TARGET_ENUM_UNITS_PARTY_WITHIN_CASTER_RANGE ||
+                TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_FRIEND_AND_PARTY ||
+                TempSpell->EffectImplicitTargetA[j] == TARGET_LOCATION_CASTER_SRC)
                 SpellSummary[i].Targets |= 1 << (SELECT_TARGET_AOE_FRIEND-1);
 
             //Spell targets any friend(or self)
             if ( TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_CASTER ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_TARGET_ALLY ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_TARGET_PARTY ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_PARTY_CASTER ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_PARTY_TARGET ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_SRC_CASTER)
+                TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_FRIEND ||
+                TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_PARTY ||
+                TempSpell->EffectImplicitTargetA[j] == TARGET_ENUM_UNITS_PARTY_WITHIN_CASTER_RANGE ||
+                TempSpell->EffectImplicitTargetA[j] == TARGET_UNIT_FRIEND_AND_PARTY ||
+                TempSpell->EffectImplicitTargetA[j] == TARGET_LOCATION_CASTER_SRC)
                 SpellSummary[i].Targets |= 1 << (SELECT_TARGET_ANY_FRIEND-1);
 
             //Make sure that this spell includes a damage effect

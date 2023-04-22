@@ -119,8 +119,8 @@ void DynamicObjectUpdater::VisitHelper(Unit* target)
     if (spellInfo->EffectApplyAuraName[eff_index] == SPELL_AURA_NONE)
         return; // do nothing aura does nothing
 
-    if (spellInfo->EffectImplicitTargetB[eff_index] == TARGET_DEST_DYNOBJ_ALLY
-        || spellInfo->EffectImplicitTargetB[eff_index] == TARGET_UNIT_AREA_ALLY_DST)
+    if (spellInfo->EffectImplicitTargetB[eff_index] == TARGET_ENUM_UNITS_FRIEND_AOE_AT_DYNOBJ_LOC
+        || spellInfo->EffectImplicitTargetB[eff_index] == TARGET_ENUM_UNITS_FRIEND_AOE_AT_DEST_LOC)
     {
         if (!i_check->IsFriendlyTo(target))
             return;

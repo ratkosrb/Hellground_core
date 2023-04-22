@@ -30,7 +30,7 @@
 #include "CreatureAI.h"
 #include "BattleGroundMgr.h"
 
-bool IsAreaEffectTarget[TOTAL_SPELL_TARGETS];
+bool IsAreaEffectTarget[MAX_SPELL_TARGETS];
 
 SpellMgr::SpellMgr()
 {
@@ -92,110 +92,110 @@ SpellMgr::SpellMgr()
         }
     }
 
-    for (int i = 0; i < TOTAL_SPELL_TARGETS; ++i)
+    for (int i = 0; i < MAX_SPELL_TARGETS; ++i)
     {
         switch (i)
         {
             case TARGET_UNIT_CASTER:
-            case TARGET_UNIT_CASTER_FISHING:
-            case TARGET_UNIT_MASTER:
-            case TARGET_UNIT_PET:
-            case TARGET_UNIT_PARTY_CASTER:
-            case TARGET_UNIT_RAID_CASTER:
+            case TARGET_LOCATION_CASTER_FISHING_SPOT:
+            case TARGET_UNIT_CASTER_MASTER:
+            case TARGET_UNIT_CASTER_PET:
+            case TARGET_ENUM_UNITS_PARTY_WITHIN_CASTER_RANGE:
+            case TARGET_ENUM_UNITS_RAID_WITHIN_CASTER_RANGE:
                 SpellTargetType[i] = TARGET_TYPE_UNIT_CASTER;
                 break;
-            case TARGET_UNIT_MINIPET:
-            case TARGET_UNIT_TARGET_ALLY:
-            case TARGET_UNIT_TARGET_RAID:
-            case TARGET_UNIT_TARGET_ANY:
-            case TARGET_UNIT_TARGET_ENEMY:
-            case TARGET_UNIT_TARGET_PARTY:
-            case TARGET_UNIT_PARTY_TARGET:
-            case TARGET_UNIT_CLASS_TARGET:
-            case TARGET_UNIT_CHAINHEAL:
+            case TARGET_UNIT_CASTER_COMPANION:
+            case TARGET_UNIT_FRIEND:
+            case TARGET_UNIT_RAID:
+            case TARGET_UNIT:
+            case TARGET_UNIT_ENEMY:
+            case TARGET_UNIT_PARTY:
+            case TARGET_UNIT_FRIEND_AND_PARTY:
+            case TARGET_UNIT_RAID_AND_CLASS:
+            case TARGET_UNIT_FRIEND_CHAIN_HEAL:
                 SpellTargetType[i] = TARGET_TYPE_UNIT_TARGET;
                 break;
-            case TARGET_UNIT_NEARBY_ENEMY:
-            case TARGET_UNIT_NEARBY_ALLY:
-            case TARGET_UNIT_NEARBY_ALLY_UNK:
-            case TARGET_UNIT_NEARBY_ENTRY:
-            case TARGET_UNIT_NEARBY_RAID:
-            case TARGET_OBJECT_USE:
+            case TARGET_UNIT_ENEMY_NEAR_CASTER:
+            case TARGET_UNIT_FRIEND_NEAR_CASTER:
+            case TARGET_UNIT_NEAR_CASTER:
+            case TARGET_UNIT_SCRIPT_NEAR_CASTER:
+            case TARGET_UNIT_RAID_NEAR_CASTER:
+            case TARGET_GAMEOBJECT_SCRIPT_NEAR_CASTER:
                 SpellTargetType[i] = TARGET_TYPE_UNIT_NEARBY;
                 break;
-            case TARGET_UNIT_AREA_ENEMY_SRC:
-            case TARGET_UNIT_AREA_ALLY_SRC:
-            case TARGET_UNIT_AREA_ENTRY_SRC:
-            case TARGET_UNIT_AREA_PARTY_SRC:
-            case TARGET_OBJECT_AREA_SRC:
+            case TARGET_ENUM_UNITS_ENEMY_AOE_AT_SRC_LOC:
+            case TARGET_ENUM_UNITS_FRIEND_AOE_AT_SRC_LOC:
+            case TARGET_ENUM_UNITS_SCRIPT_AOE_AT_SRC_LOC:
+            case TARGET_ENUM_UNITS_PARTY_AOE_AT_SRC_LOC:
+            case TARGET_ENUM_GAMEOBJECTS_SCRIPT_AOE_AT_SRC_LOC:
                 SpellTargetType[i] = TARGET_TYPE_AREA_SRC;
                 break;
-            case TARGET_UNIT_AREA_ENEMY_DST:
-            case TARGET_UNIT_AREA_ALLY_DST:
-            case TARGET_UNIT_AREA_ENTRY_DST:
-            case TARGET_UNIT_AREA_PARTY_DST:
-            case TARGET_OBJECT_AREA_DST:
+            case TARGET_ENUM_UNITS_ENEMY_AOE_AT_DEST_LOC:
+            case TARGET_ENUM_UNITS_FRIEND_AOE_AT_DEST_LOC:
+            case TARGET_ENUM_UNITS_SCRIPT_AOE_AT_DEST_LOC:
+            case TARGET_ENUM_UNITS_PARTY_AOE_AT_DEST_LOC:
+            case TARGET_ENUM_GAMEOBJECTS_SCRIPT_AOE_AT_DEST_LOC:
                 SpellTargetType[i] = TARGET_TYPE_AREA_DST;
                 break;
-            case TARGET_UNIT_CONE_ENEMY:
-            case TARGET_UNIT_CONE_ALLY:
-            case TARGET_UNIT_CONE_ENTRY:
-            case TARGET_UNIT_CONE_ENEMY_UNKNOWN:
+            case TARGET_ENUM_UNITS_ENEMY_IN_CONE_24:
+            case TARGET_ENUM_UNITS_FRIEND_IN_CONE:
+            case TARGET_ENUM_UNITS_SCRIPT_IN_CONE_60:
+            case TARGET_ENUM_UNITS_ENEMY_IN_CONE_54:
                 SpellTargetType[i] = TARGET_TYPE_AREA_CONE;
                 break;
-            case TARGET_DST_CASTER:
-            case TARGET_SRC_CASTER:
-            case TARGET_MINION:
-            case TARGET_DEST_CASTER_FRONT_LEAP:
-            case TARGET_DEST_CASTER_FRONT:
-            case TARGET_DEST_CASTER_BACK:
-            case TARGET_DEST_CASTER_RIGHT:
-            case TARGET_DEST_CASTER_LEFT:
-            case TARGET_DEST_CASTER_FRONT_LEFT:
-            case TARGET_DEST_CASTER_BACK_LEFT:
-            case TARGET_DEST_CASTER_BACK_RIGHT:
-            case TARGET_DEST_CASTER_FRONT_RIGHT:
-            case TARGET_DEST_CASTER_RANDOM:
-            case TARGET_DEST_CASTER_RADIUS:
+            case TARGET_LOCATION_CASTER_DEST:
+            case TARGET_LOCATION_CASTER_SRC:
+            case TARGET_LOCATION_UNIT_MINION_POSITION:
+            case TARGET_LOCATION_CASTER_FRONT_LEAP:
+            case TARGET_LOCATION_CASTER_FRONT:
+            case TARGET_LOCATION_CASTER_BACK:
+            case TARGET_LOCATION_CASTER_LEFT:
+            case TARGET_LOCATION_CASTER_RIGHT:
+            case TARGET_LOCATION_CASTER_FRONT_RIGHT:
+            case TARGET_LOCATION_CASTER_BACK_RIGHT:
+            case TARGET_LOCATION_CASTER_BACK_LEFT:
+            case TARGET_LOCATION_CASTER_FRONT_LEFT:
+            case TARGET_LOCATION_CASTER_RANDOM_SIDE:
+            case TARGET_LOCATION_CASTER_RANDOM_CIRCUMFERENCE:
                 SpellTargetType[i] = TARGET_TYPE_DEST_CASTER;
                 break;
-            case TARGET_DST_TARGET_ENEMY:
-            case TARGET_DEST_TARGET_ANY:
-            case TARGET_DEST_TARGET_FRONT:
-            case TARGET_DEST_TARGET_BACK:
-            case TARGET_DEST_TARGET_RIGHT:
-            case TARGET_DEST_TARGET_LEFT:
-            case TARGET_DEST_TARGET_FRONT_LEFT:
-            case TARGET_DEST_TARGET_BACK_LEFT:
-            case TARGET_DEST_TARGET_BACK_RIGHT:
-            case TARGET_DEST_TARGET_FRONT_RIGHT:
-            case TARGET_DEST_TARGET_RANDOM:
-            case TARGET_DEST_TARGET_RADIUS:
+            case TARGET_LOCATION_CASTER_TARGET_POSITION:
+            case TARGET_LOCATION_UNIT_POSITION:
+            case TARGET_LOCATION_UNIT_FRONT:
+            case TARGET_LOCATION_UNIT_BACK:
+            case TARGET_LOCATION_UNIT_RIGHT:
+            case TARGET_LOCATION_UNIT_LEFT:
+            case TARGET_LOCATION_UNIT_FRONT_RIGHT:
+            case TARGET_LOCATION_UNIT_BACK_RIGHT:
+            case TARGET_LOCATION_UNIT_BACK_LEFT:
+            case TARGET_LOCATION_UNIT_FRONT_LEFT:
+            case TARGET_LOCATION_UNIT_RANDOM_SIDE:
+            case TARGET_LOCATION_UNIT_RANDOM_CIRCUMFERENCE:
                 SpellTargetType[i] = TARGET_TYPE_DEST_TARGET;
                 break;
-            case TARGET_DEST_DYNOBJ_ENEMY:
-            case TARGET_DEST_DYNOBJ_ALLY:
-            case TARGET_DEST_DYNOBJ_NONE:
-            case TARGET_DEST_DEST:
-            case TARGET_DEST_TRAJ:
-            case TARGET_DEST_DEST_FRONT_LEFT:
-            case TARGET_DEST_DEST_BACK_LEFT:
-            case TARGET_DEST_DEST_BACK_RIGHT:
-            case TARGET_DEST_DEST_FRONT_RIGHT:
-            case TARGET_DEST_DEST_FRONT:
-            case TARGET_DEST_DEST_BACK:
-            case TARGET_DEST_DEST_RIGHT:
-            case TARGET_DEST_DEST_LEFT:
-            case TARGET_DEST_DEST_RANDOM:
+            case TARGET_ENUM_UNITS_ENEMY_AOE_AT_DYNOBJ_LOC:
+            case TARGET_ENUM_UNITS_FRIEND_AOE_AT_DYNOBJ_LOC:
+            case TARGET_ENUM_UNITS_SCRIPT_AOE_AT_DYNOBJ_LOC:
+            case TARGET_LOCATION_CURRENT_REFERENCE:
+            case TARGET_LOCATION_TRAJECTORY:
+            case TARGET_LOCATION_NE:
+            case TARGET_LOCATION_NW:
+            case TARGET_LOCATION_SE:
+            case TARGET_LOCATION_SW:
+            case TARGET_LOCATION_NORTH:
+            case TARGET_LOCATION_SOUTH:
+            case TARGET_LOCATION_EAST:
+            case TARGET_LOCATION_WEST:
+            case TARGET_LOCATION_RANDOM_SIDE:
                 SpellTargetType[i] = TARGET_TYPE_DEST_DEST;
                 break;
-            case TARGET_DST_DB:
-            case TARGET_DST_HOME:
-            case TARGET_DST_NEARBY_ENTRY:
+            case TARGET_LOCATION_DATABASE:
+            case TARGET_LOCATION_CASTER_HOME_BIND:
+            case TARGET_LOCATION_SCRIPT_NEAR_CASTER:
                 SpellTargetType[i] = TARGET_TYPE_DEST_SPECIAL;
                 break;
-            case TARGET_UNIT_CHANNEL:
-            case TARGET_DEST_CHANNEL:
+            case TARGET_UNIT_CHANNEL_TARGET:
+            case TARGET_LOCATION_CHANNEL_TARGET_DEST:
                 SpellTargetType[i] = TARGET_TYPE_CHANNEL;
                 break;
             default:
@@ -203,24 +203,24 @@ SpellMgr::SpellMgr()
         }
     }
 
-    for (int i = 0; i < TOTAL_SPELL_TARGETS; ++i)
+    for (int i = 0; i < MAX_SPELL_TARGETS; ++i)
     {
         switch (i)
         {
-            case TARGET_UNIT_AREA_ENEMY_DST:
-            case TARGET_UNIT_AREA_ENEMY_SRC:
-            case TARGET_UNIT_AREA_ALLY_DST:
-            case TARGET_UNIT_AREA_ALLY_SRC:
-            case TARGET_UNIT_AREA_ENTRY_DST:
-            case TARGET_UNIT_AREA_ENTRY_SRC:
-            case TARGET_UNIT_AREA_PARTY_DST:
-            case TARGET_UNIT_AREA_PARTY_SRC:
-            case TARGET_UNIT_PARTY_TARGET:
-            case TARGET_UNIT_PARTY_CASTER:
-            case TARGET_UNIT_CONE_ENEMY:
-            case TARGET_UNIT_CONE_ALLY:
-            case TARGET_UNIT_CONE_ENEMY_UNKNOWN:
-            case TARGET_UNIT_RAID_CASTER:
+            case TARGET_ENUM_UNITS_ENEMY_AOE_AT_DEST_LOC:
+            case TARGET_ENUM_UNITS_ENEMY_AOE_AT_SRC_LOC:
+            case TARGET_ENUM_UNITS_FRIEND_AOE_AT_DEST_LOC:
+            case TARGET_ENUM_UNITS_FRIEND_AOE_AT_SRC_LOC:
+            case TARGET_ENUM_UNITS_SCRIPT_AOE_AT_DEST_LOC:
+            case TARGET_ENUM_UNITS_SCRIPT_AOE_AT_SRC_LOC:
+            case TARGET_ENUM_UNITS_PARTY_AOE_AT_DEST_LOC:
+            case TARGET_ENUM_UNITS_PARTY_AOE_AT_SRC_LOC:
+            case TARGET_UNIT_FRIEND_AND_PARTY:
+            case TARGET_ENUM_UNITS_PARTY_WITHIN_CASTER_RANGE:
+            case TARGET_ENUM_UNITS_ENEMY_IN_CONE_24:
+            case TARGET_ENUM_UNITS_FRIEND_IN_CONE:
+            case TARGET_ENUM_UNITS_ENEMY_IN_CONE_54:
+            case TARGET_ENUM_UNITS_RAID_WITHIN_CASTER_RANGE:
                 IsAreaEffectTarget[i] = true;
                 break;
             default:
@@ -658,16 +658,16 @@ bool SpellMgr::IsPositiveTarget(uint32 targetA, uint32 targetB)
     // non-positive targets
     switch (targetA)
     {
-        case TARGET_UNIT_TARGET_ENEMY:
-        case TARGET_UNIT_AREA_ENEMY_SRC:
-        case TARGET_UNIT_AREA_ENEMY_DST:
-        case TARGET_UNIT_CONE_ENEMY:
-        case TARGET_DEST_DYNOBJ_ENEMY:
-        case TARGET_DST_TARGET_ENEMY:
-        case TARGET_UNIT_CHANNEL:
+        case TARGET_UNIT_ENEMY:
+        case TARGET_ENUM_UNITS_ENEMY_AOE_AT_SRC_LOC:
+        case TARGET_ENUM_UNITS_ENEMY_AOE_AT_DEST_LOC:
+        case TARGET_ENUM_UNITS_ENEMY_IN_CONE_24:
+        case TARGET_ENUM_UNITS_ENEMY_AOE_AT_DYNOBJ_LOC:
+        case TARGET_LOCATION_CASTER_TARGET_POSITION:
+        case TARGET_UNIT_CHANNEL_TARGET:
             return false;
-        case TARGET_SRC_CASTER:
-            return (targetB == TARGET_UNIT_AREA_PARTY_SRC || targetB == TARGET_UNIT_AREA_ALLY_SRC);
+        case TARGET_LOCATION_CASTER_SRC:
+            return (targetB == TARGET_ENUM_UNITS_PARTY_AOE_AT_SRC_LOC || targetB == TARGET_ENUM_UNITS_FRIEND_AOE_AT_SRC_LOC);
         default:
             break;
     }
@@ -863,7 +863,7 @@ bool SpellMgr::IsPositiveEffect(uint32 spellId, uint32 effIndex)
                     return false;
                 case SPELL_AURA_PERIODIC_DAMAGE:            // used in positive spells also.
                     // part of negative spell if cast at self (prevent cancel)
-                    if (spellproto->EffectImplicitTargetA[effIndex] == TARGET_UNIT_TARGET_ANY)
+                    if (spellproto->EffectImplicitTargetA[effIndex] == TARGET_UNIT)
                         return false;
                     // part of negative spell if cast at self (prevent cancel)
                     else if (spellproto->EffectImplicitTargetA[effIndex] == TARGET_UNIT_CASTER)
@@ -1212,7 +1212,7 @@ void SpellMgr::LoadSpellTargetPositions()
         bool found = false;
         for (int i = 0; i < 3; ++i)
         {
-            if (spellInfo->EffectImplicitTargetA[i]==TARGET_DST_DB || spellInfo->EffectImplicitTargetB[i]==TARGET_DST_DB)
+            if (spellInfo->EffectImplicitTargetA[i]==TARGET_LOCATION_DATABASE || spellInfo->EffectImplicitTargetB[i]==TARGET_LOCATION_DATABASE)
             {
                 found = true;
                 break;
@@ -1220,7 +1220,7 @@ void SpellMgr::LoadSpellTargetPositions()
         }
         if (!found)
         {
-            sLog.outLog(LOG_DB_ERR, "Spell (Id: %u) listed in `spell_target_position` does not have target TARGET_DST_DB (17).",Spell_ID);
+            sLog.outLog(LOG_DB_ERR, "Spell (Id: %u) listed in `spell_target_position` does not have target TARGET_LOCATION_DATABASE (17).",Spell_ID);
             continue;
         }
 
@@ -2081,13 +2081,13 @@ bool SpellMgr::IsSplashBuffAura(SpellEntry const* spellInfo)
             if (spellInfo->Effect[i] == SPELL_EFFECT_APPLY_AREA_AURA_PARTY)
                return true;
 
-            if (spellInfo->EffectImplicitTargetA[i] == TARGET_UNIT_PARTY_CASTER)
+            if (spellInfo->EffectImplicitTargetA[i] == TARGET_ENUM_UNITS_PARTY_WITHIN_CASTER_RANGE)
                 return true;
 
-            if (spellInfo->EffectImplicitTargetB[i] == TARGET_UNIT_AREA_PARTY_SRC)
+            if (spellInfo->EffectImplicitTargetB[i] == TARGET_ENUM_UNITS_PARTY_AOE_AT_SRC_LOC)
                 return true;
 
-            if (spellInfo->EffectImplicitTargetB[i] == TARGET_UNIT_AREA_PARTY_DST)
+            if (spellInfo->EffectImplicitTargetB[i] == TARGET_ENUM_UNITS_PARTY_AOE_AT_DEST_LOC)
                 return true;
         }
 
@@ -2756,7 +2756,7 @@ void SpellMgr::LoadSpellPetAuras()
                 continue;
             }
 
-            PetAura pa(pet, aura, spellInfo->EffectImplicitTargetA[i] == TARGET_UNIT_PET, spellInfo->CalculateSimpleValue(i));
+            PetAura pa(pet, aura, spellInfo->EffectImplicitTargetA[i] == TARGET_UNIT_CASTER_PET, spellInfo->CalculateSimpleValue(i));
             mSpellPetAuraMap[spell] = pa;
         }
 
@@ -2936,7 +2936,7 @@ void SpellMgr::LoadSpellCustomAttr()
                     spellInfo->Effect[1] = 0;
                     break;
                 case 38829: // arcatraz sentinels prevent spam
-                    spellInfo->EffectImplicitTargetB[0] = TARGET_UNIT_AREA_ENEMY_DST;
+                    spellInfo->EffectImplicitTargetB[0] = TARGET_ENUM_UNITS_ENEMY_AOE_AT_DEST_LOC;
                     break;
                 case 26635: // berserking troll racial
                     spellInfo->EffectDieSides[0] = 1;
@@ -2969,7 +2969,7 @@ void SpellMgr::LoadSpellCustomAttr()
                 case 40287:
                 case 40288:
                 case 40289:
-                    spellInfo->EffectImplicitTargetA[0] = TARGET_DEST_DEST;
+                    spellInfo->EffectImplicitTargetA[0] = TARGET_LOCATION_CURRENT_REFERENCE;
                     break;
                 case 30532: // karazhan chess teleport
                     spellInfo->rangeIndex = 6;
@@ -3005,11 +3005,11 @@ void SpellMgr::LoadSpellCustomAttr()
                     spellInfo->AttributesEx3 |= SPELL_ATTR_EX3_NO_INITIAL_AGGRO;
                     break;
                 case 45885: // KJ shadow spike
-                    spellInfo->EffectImplicitTargetB[0] = TARGET_UNIT_AREA_ENEMY_DST;
-                    spellInfo->EffectImplicitTargetB[1] = TARGET_UNIT_AREA_ENEMY_DST;
+                    spellInfo->EffectImplicitTargetB[0] = TARGET_ENUM_UNITS_ENEMY_AOE_AT_DEST_LOC;
+                    spellInfo->EffectImplicitTargetB[1] = TARGET_ENUM_UNITS_ENEMY_AOE_AT_DEST_LOC;
                     break;
                 case 46589: // Shadow spike, target destination set in aura::triggerspell
-                    spellInfo->EffectImplicitTargetA[0] = TARGET_DEST_DEST;
+                    spellInfo->EffectImplicitTargetA[0] = TARGET_LOCATION_CURRENT_REFERENCE;
                     spellInfo->speed = 6;
                     break;
                 case 38112: // vashj shield generator
@@ -3032,10 +3032,10 @@ void SpellMgr::LoadSpellCustomAttr()
                     spellInfo->Effect[1] = 0;
                     break;
                 case 42338: // raptor bait, target quest credit
-                    spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_NEARBY_ENTRY;
+                    spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_SCRIPT_NEAR_CASTER;
                     break;
                 case 42339: // water bucket throw
-                    spellInfo->EffectImplicitTargetA[0] = TARGET_DEST_DEST;
+                    spellInfo->EffectImplicitTargetA[0] = TARGET_LOCATION_CURRENT_REFERENCE;
                     break;
                 case 36576: // no damage calc for shaleskin
                 case 37950: // no damage calc for mutated blood
@@ -3067,11 +3067,11 @@ void SpellMgr::LoadSpellCustomAttr()
                     spellInfo->ChannelInterruptFlags |= AURA_INTERRUPT_FLAG_MOVE;
                     break;
                 case 33814: // visual meteor summon infernal
-                    spellInfo->EffectImplicitTargetA[0] = TARGET_DEST_DEST;
-                    spellInfo->EffectImplicitTargetA[1] = TARGET_DEST_DEST;
+                    spellInfo->EffectImplicitTargetA[0] = TARGET_LOCATION_CURRENT_REFERENCE;
+                    spellInfo->EffectImplicitTargetA[1] = TARGET_LOCATION_CURRENT_REFERENCE;
                     break;
                 case 36558: // artor prison visual
-                    spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_NEARBY_ENTRY;
+                    spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_SCRIPT_NEAR_CASTER;
                     break;
                 case 36449: // maghteridon roof falling at phase change
                     spellInfo->AttributesCu |= SPELL_ATTR_CU_IGNORE_ARMOR;
@@ -3083,9 +3083,9 @@ void SpellMgr::LoadSpellCustomAttr()
                     break;
                 case 38511: // vashj persuasion
                     spellInfo->MaxAffectedTargets = 1;
-                    spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_TARGET_ENEMY;
-                    spellInfo->EffectImplicitTargetA[1] = TARGET_UNIT_TARGET_ENEMY;
-                    spellInfo->EffectImplicitTargetA[2] = TARGET_UNIT_TARGET_ENEMY;
+                    spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_ENEMY;
+                    spellInfo->EffectImplicitTargetA[1] = TARGET_UNIT_ENEMY;
+                    spellInfo->EffectImplicitTargetA[2] = TARGET_UNIT_ENEMY;
                     spellInfo->EffectImplicitTargetB[0] = 0;
                     spellInfo->EffectImplicitTargetB[1] = 0;
                     spellInfo->EffectImplicitTargetB[2] = 0;
@@ -3111,7 +3111,7 @@ void SpellMgr::LoadSpellCustomAttr()
                     spellInfo->EffectImplicitTargetB[0] = 0;
                     break;
                 case 37476: // chess horde king cleave in front
-                    spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_CONE_ENTRY;
+                    spellInfo->EffectImplicitTargetA[0] = TARGET_ENUM_UNITS_SCRIPT_IN_CONE_60;
                     spellInfo->EffectImplicitTargetB[0] = 0;
                     break;
                 case 29683: // spotlight also on players?
@@ -3155,7 +3155,7 @@ void SpellMgr::LoadSpellCustomAttr()
                     spellInfo->StartRecoveryTime = 1500;
                     break;
                 case 39985: // posses - shartuul transporter
-                    spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_TARGET_ENEMY;
+                    spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_ENEMY;
                     break;
                 case 32096: // Thrallmar's Favor
                     spellInfo->EffectBasePoints[0] = 24;
@@ -3233,8 +3233,8 @@ void SpellMgr::LoadSpellCustomAttr()
             case SPELLFAMILY_DRUID:
             {
                 if ((spellInfo->SpellFamilyFlags & 128) &&
-                   ((spellInfo->EffectImplicitTargetA[0] == TARGET_DEST_DYNOBJ_ALLY) ||
-                   (spellInfo->EffectImplicitTargetA[0] == TARGET_DEST_CHANNEL)))
+                   ((spellInfo->EffectImplicitTargetA[0] == TARGET_ENUM_UNITS_FRIEND_AOE_AT_DYNOBJ_LOC) ||
+                   (spellInfo->EffectImplicitTargetA[0] == TARGET_LOCATION_CHANNEL_TARGET_DEST)))
                         spellInfo->EffectImplicitTargetA[0] = 0; // tranquility log spam
 
                 switch (spellInfo->Id)
@@ -3308,7 +3308,7 @@ void SpellMgr::LoadSpellCustomAttr()
                     spellInfo->EffectRadiusIndex[1] = 18;
                     spellInfo->EffectMiscValue[1] = 1;
                     spellInfo->Effect[2] = SPELL_EFFECT_TRIGGER_SPELL;
-                    spellInfo->EffectImplicitTargetA[2] = TARGET_UNIT_AREA_ENEMY_DST;
+                    spellInfo->EffectImplicitTargetA[2] = TARGET_ENUM_UNITS_ENEMY_AOE_AT_DEST_LOC;
                     spellInfo->EffectRadiusIndex[2] = 13;
                     spellInfo->EffectTriggerSpell[2] = 39897;
                     spellInfo->AttributesEx2 |= SPELL_ATTR_EX2_IGNORE_LOS;
@@ -3373,7 +3373,7 @@ void SpellMgr::LoadSpellCustomAttr()
             case SPELLFAMILY_HUNTER:
             {
                 if (spellInfo->Id == 45172) // BE guards shooting at flying players on isle, prevent spam
-                    spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_AREA_ENEMY_DST;
+                    spellInfo->EffectImplicitTargetA[0] = TARGET_ENUM_UNITS_ENEMY_AOE_AT_DEST_LOC;
                 else if (spellInfo->Id == 34026) // kill command, all handled by first dummy effect
                     spellInfo->Effect[1] = 0;
                 else if (spellInfo->Id == 1543 || spellInfo->Id == 28822) // flares
@@ -3585,7 +3585,7 @@ void SpellMgr::LoadSpellCustomAttr()
                 spellInfo->AttributesCu &= ~SPELL_ATTR_CU_MOVEMENT_IMPAIR;
                 break;
             case 45680: // Kil'jaeden orbs shadowbolts
-                spellInfo->EffectImplicitTargetB[0] = TARGET_UNIT_AREA_ENEMY_DST;
+                spellInfo->EffectImplicitTargetB[0] = TARGET_ENUM_UNITS_ENEMY_AOE_AT_DEST_LOC;
                 spellInfo->MaxAffectedTargets = 1;
                 break;
             case 39042: // Rampant Infection
@@ -3598,7 +3598,7 @@ void SpellMgr::LoadSpellCustomAttr()
                 spellInfo->EffectRadiusIndex[0] = 15;
                 break;
             case 41120:
-                spellInfo->EffectImplicitTargetA[0] = TARGET_DEST_TARGET_LEFT;
+                spellInfo->EffectImplicitTargetA[0] = TARGET_LOCATION_UNIT_LEFT;
                 break;
             case 41117:
                 spellInfo->Effect[0] = 0;
@@ -3606,7 +3606,7 @@ void SpellMgr::LoadSpellCustomAttr()
                 break;
             case 38054:
                 spellInfo->MaxAffectedTargets = 10;
-                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_AREA_ENTRY_SRC;
+                spellInfo->EffectImplicitTargetA[0] = TARGET_ENUM_UNITS_SCRIPT_AOE_AT_SRC_LOC;
                 spellInfo->Targets = TARGET_FLAG_GAMEOBJECT & TARGET_FLAG_DEST_LOCATION;
                 spellInfo->EffectMiscValue[0] = 0;
                 break;
@@ -3684,7 +3684,7 @@ void SpellMgr::LoadSpellCustomAttr()
             case 42005: // Bloodboil
             case 31347: // Doom
             case 39594: // Cyclone
-                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_TARGET_ENEMY;
+                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_ENEMY;
                 spellInfo->EffectImplicitTargetB[0] = 0;
                 if (i == 42005)
                     spellInfo->rangeIndex = 6;
@@ -3741,7 +3741,7 @@ void SpellMgr::LoadSpellCustomAttr()
                 spellInfo->EffectImplicitTargetA[1] = TARGET_UNIT_CASTER;
                 spellInfo->Effect[2] = 0;
             case 40106:
-                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_TARGET_ENEMY;
+                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_ENEMY;
                 spellInfo->EffectTriggerSpell[0] = 0;
             case 41001: // Fatal Attraction Aura
                 spellInfo->EffectTriggerSpell[1] = 0;
@@ -3752,14 +3752,14 @@ void SpellMgr::LoadSpellCustomAttr()
                 spellInfo->Effect[1] = 0;
                 break;
             case 40870: // Fatal Attraction Trigger
-                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_TARGET_ALLY;
+                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_FRIEND;
                 spellInfo->EffectImplicitTargetB[0] = 0;
                 break;
             case 40594: // Fel Rage
                 spellInfo->EffectBasePoints[1] = 99;
                 break;
             case 40855: // Akama Soul Expel
-                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_TARGET_ENEMY;
+                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_ENEMY;
                 break;
             case 40401: // Shade of Akama Channeling
                 spellInfo->Effect[2] = spellInfo->Effect[0];
@@ -3776,7 +3776,7 @@ void SpellMgr::LoadSpellCustomAttr()
                 spellInfo->procFlags = PROC_FLAG_SUCCESSFUL_MELEE_HIT;
                 break;
             case 13278: // Gnomish Death Ray
-                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_TARGET_ENEMY;
+                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_ENEMY;
                 break;
             case 6947:  // Curse of the Bleakheart
                 spellInfo->procFlags = 65876;      //any succesfull melee, ranged or negative spell hit
@@ -3851,7 +3851,7 @@ void SpellMgr::LoadSpellCustomAttr()
             case 41363: // Shared Bonds
                 spellInfo->AttributesEx &= ~SPELL_ATTR_EX_CHANNELED_1;
             case 16007: // DRACO_INCARCINATRIX_900
-                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_TARGET_ENEMY;
+                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_ENEMY;
                 break;
             case 39331: // In Session
                 spellInfo->DurationIndex = 21;  // infinity
@@ -3890,9 +3890,9 @@ void SpellMgr::LoadSpellCustomAttr()
                 spellInfo->rangeIndex = 6;
                 break;
             case 29951: // Blizzard (Shade of Aran)
-                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_TARGET_ENEMY;
+                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_ENEMY;
                 spellInfo->EffectImplicitTargetB[0] = 0;
-                spellInfo->EffectImplicitTargetA[1] = TARGET_UNIT_TARGET_ENEMY;
+                spellInfo->EffectImplicitTargetA[1] = TARGET_UNIT_ENEMY;
                 spellInfo->EffectImplicitTargetB[1] = 0;
                 break;
             case 36952: // (temporary) Ogre Building Bunny Curse Visual Large - penalty curse for SWP
@@ -3902,23 +3902,23 @@ void SpellMgr::LoadSpellCustomAttr()
             case 29955: // Arcane Missiles (Shade of Aran)
                 spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_CASTER;
                 spellInfo->EffectImplicitTargetA[1] = TARGET_UNIT_CASTER;
-                spellInfo->EffectImplicitTargetA[2] = TARGET_UNIT_TARGET_ENEMY;
+                spellInfo->EffectImplicitTargetA[2] = TARGET_UNIT_ENEMY;
                 break;
             case 29956: // arcane missiles shade of aran
                 spellInfo->EffectBasePoints[0] = 2500;
                 break;
             case 30541: // Magtheridon's Blaze
-                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_TARGET_ENEMY;
+                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_ENEMY;
                 spellInfo->EffectImplicitTargetB[0] = 0;
                 break;
             case 36449: // Magtheridon's Debris (30% hp)
-                spellInfo->EffectImplicitTargetA[0] = TARGET_SRC_CASTER;
-                spellInfo->EffectImplicitTargetB[0] = TARGET_UNIT_AREA_ENEMY_SRC;
-                spellInfo->EffectImplicitTargetA[1] = TARGET_SRC_CASTER;
-                spellInfo->EffectImplicitTargetB[1] = TARGET_UNIT_AREA_ENEMY_SRC;
+                spellInfo->EffectImplicitTargetA[0] = TARGET_LOCATION_CASTER_SRC;
+                spellInfo->EffectImplicitTargetB[0] = TARGET_ENUM_UNITS_ENEMY_AOE_AT_SRC_LOC;
+                spellInfo->EffectImplicitTargetA[1] = TARGET_LOCATION_CASTER_SRC;
+                spellInfo->EffectImplicitTargetB[1] = TARGET_ENUM_UNITS_ENEMY_AOE_AT_SRC_LOC;
                 break;
             case 30631: // Magtheridon's Debris damage
-                spellInfo->EffectImplicitTargetB[0] = TARGET_UNIT_AREA_ENEMY_DST;
+                spellInfo->EffectImplicitTargetB[0] = TARGET_ENUM_UNITS_ENEMY_AOE_AT_DEST_LOC;
                 break;
             case 30207: // Magtheridon's creatures Shadow Grasp
                 spellInfo->StackAmount = 5;
@@ -3958,7 +3958,7 @@ void SpellMgr::LoadSpellCustomAttr()
                 spellInfo->RecoveryTime = 1080;
                 break;
             case 25678:
-                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_TARGET_ANY;
+                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT;
                 break;
             case 40129: // Summon Air Elemental (by quest  [The Soul Cannon of Reth'hedron], fix cast freeze - fix quest)
                 spellInfo->AttributesEx &= ~SPELL_ATTR_EX_CHANNELED_1;
@@ -3983,7 +3983,7 @@ void SpellMgr::LoadSpellCustomAttr()
                 break;
             case 36717: //energy discharge
                 spellInfo->MaxAffectedTargets = 1;
-                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_NEARBY_ENEMY;
+                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_ENEMY_NEAR_CASTER;
                 break;
             case 38829: // energy discharge hc
                 spellInfo->MaxAffectedTargets = 1;
@@ -3996,7 +3996,7 @@ void SpellMgr::LoadSpellCustomAttr()
                 spellInfo->EffectMechanic[1] = MECHANIC_NONE;
                 break;
             case 30834: // Infernal Relay
-                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_TARGET_ANY;
+                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT;
                 break;
             // exploited quiver/ammo pouch spells for incredible ranged attack speed bug
             case 14824:

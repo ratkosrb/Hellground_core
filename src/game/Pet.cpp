@@ -1718,8 +1718,8 @@ void Pet::ToggleAutocast(uint32 spellid, bool apply)
         return;
 
     //if(const SpellEntry *tempSpell = GetSpellStore()->LookupEntry(spellid))
-    //    if (tempSpell->EffectImplicitTargetA[0] != TARGET_SRC_CASTER
-    //        && tempSpell->EffectImplicitTargetA[0] != TARGET_UNIT_TARGET_ENEMY)
+    //    if (tempSpell->EffectImplicitTargetA[0] != TARGET_LOCATION_CASTER_SRC
+    //        && tempSpell->EffectImplicitTargetA[0] != TARGET_UNIT_ENEMY)
     //        return;
 
     PetSpellMap::const_iterator itr = m_spells.find((uint16)spellid);

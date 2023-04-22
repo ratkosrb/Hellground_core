@@ -329,7 +329,7 @@ struct boss_kaelthasAI : public ScriptedAI
         SpellEntry *TempSpell = (SpellEntry*)GetSpellStore()->LookupEntry(SPELL_PYROBLAST);
         if(TempSpell)
         {
-            TempSpell->EffectImplicitTargetA[0] = TARGET_UNIT_TARGET_ENEMY;
+            TempSpell->EffectImplicitTargetA[0] = TARGET_UNIT_ENEMY;
             TempSpell->EffectImplicitTargetB[0] = 0;
         }
 
@@ -339,7 +339,7 @@ struct boss_kaelthasAI : public ScriptedAI
             MCTempSpell->MaxAffectedTargets = 1;
             for(uint8 i = 0; i<3; i++)
             {
-                MCTempSpell->EffectImplicitTargetA[i] = TARGET_UNIT_TARGET_ENEMY;
+                MCTempSpell->EffectImplicitTargetA[i] = TARGET_UNIT_ENEMY;
                 MCTempSpell->EffectImplicitTargetB[i] = 0;
             }
         }

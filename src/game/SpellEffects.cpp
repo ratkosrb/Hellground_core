@@ -3002,7 +3002,7 @@ void Spell::EffectTeleportUnits(uint32 i)
     else if (unitTarget->GetTypeId() == TYPEID_PLAYER)
         ((Player*)unitTarget)->TeleportTo(mapid, dest.x, dest.y, dest.z, dest.o, unitTarget == m_caster ? TELE_TO_SPELL : 0);
 
-    // post effects for TARGET_DST_DB
+    // post effects for TARGET_LOCATION_DATABASE
     switch (GetSpellEntry()->Id)
     {
         // Dimensional Ripper - Everlook

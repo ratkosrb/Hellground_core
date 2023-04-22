@@ -420,7 +420,7 @@ enum AttributesCu
 
 typedef std::map<int32, std::vector<int32> > SpellLinkedMap;
 
-extern bool IsAreaEffectTarget[TOTAL_SPELL_TARGETS];
+extern bool IsAreaEffectTarget[MAX_SPELL_TARGETS];
 
 class HELLGROUND_IMPORT_EXPORT SpellMgr
 {
@@ -677,7 +677,7 @@ class HELLGROUND_IMPORT_EXPORT SpellMgr
         }
 
         SpellEffectTargetTypes EffectTargetType[TOTAL_SPELL_EFFECTS];
-        SpellSelectTargetTypes SpellTargetType[TOTAL_SPELL_TARGETS];
+        SpellSelectTargetTypes SpellTargetType[MAX_SPELL_TARGETS];
 
         static void ApplySpellThreatModifiers(SpellEntry const *spellInfo, float &threat);
 

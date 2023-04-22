@@ -336,7 +336,7 @@ void CharmInfo::HandleSpellActCommand(uint64 targetGUID, uint32 spellId)
         return;
 
     for (uint32 i = 0; i < 3;i++)
-         if (spellInfo->EffectImplicitTargetA[i] == TARGET_UNIT_AREA_ENEMY_SRC || spellInfo->EffectImplicitTargetA[i] == TARGET_UNIT_AREA_ENEMY_DST || spellInfo->EffectImplicitTargetA[i] == TARGET_DEST_DYNOBJ_ENEMY)
+         if (spellInfo->EffectImplicitTargetA[i] == TARGET_ENUM_UNITS_ENEMY_AOE_AT_SRC_LOC || spellInfo->EffectImplicitTargetA[i] == TARGET_ENUM_UNITS_ENEMY_AOE_AT_DEST_LOC || spellInfo->EffectImplicitTargetA[i] == TARGET_ENUM_UNITS_ENEMY_AOE_AT_DYNOBJ_LOC)
              return;
 
     // do not cast not learned spells
