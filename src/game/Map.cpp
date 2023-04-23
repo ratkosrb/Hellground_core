@@ -3343,7 +3343,7 @@ bool Map::GetWalkHitPosition(Transport* transport, float srcX, float srcY, float
         Vector3 startPos = dstPos;
         dstPos = Vector3(pathPoints[i * VERTEX_SIZE + 2], pathPoints[i * VERTEX_SIZE], pathPoints[i * VERTEX_SIZE + 1]);
         dstPos.z += 1.0f;
-        if (GetDynamicObjectHitPos(startPos, dstPos, dstPos, -0.1f))
+        if (GetDynamicObjectHitPos(startPos, dstPos, dstPos, -1.0f))
             break;
     }
 
