@@ -1199,10 +1199,8 @@ bool WorldObject::IsWithinLOS(const float ox, const float oy, const float oz) co
 
     float x,y,z;
     GetPosition(x,y,z);
-    VMAP::IVMapManager *vMapManager = VMAP::VMapFactory::createOrGetVMapManager();
-    bool result = vMapManager->isInLineOfSight(GetMapId(), x, y, z +2.0f, ox, oy, oz +2.0f);
-    
 
+    bool result = GetMap()->IsInLineOfSight(x, y, z +2.0f, ox, oy, oz +2.0f);
     uint8 prec = sWorld.getConfig(CONFIG_VMAP_GROUND);
     if (prec && result) // if not result then no reason to check
     {

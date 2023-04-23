@@ -38,6 +38,7 @@ namespace VMAP
     {
         if ((ModelSpawn::flags & MOD_M2) && !alsoM2)
             return false; // m2 objects no collision
+
         if (!iModel)
         {
 #ifdef VMAP_DEBUG
@@ -57,7 +58,7 @@ namespace VMAP
         Vector3 p = iInvRot * (pRay.origin() - iPos) * iInvScale;
         Ray modRay(p, iInvRot * pRay.direction());
         float distance = pMaxDist * iInvScale;
-        bool hit = iModel->IntersectRay(modRay, distance, pStopAtFirstHit);
+        bool hit = iModel->IntersectRay(modRay, distance, pStopAtFirstHit, !alsoM2);
         if(hit)
         {
             distance *= iScale;

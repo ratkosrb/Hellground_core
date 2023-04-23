@@ -45,6 +45,7 @@ namespace VMAP
 {
     class StaticMapTree;
     class WorldModel;
+    class ModelInstance;
 
     class ManagedModel
     {
@@ -85,8 +86,9 @@ namespace VMAP
             void unloadMap(unsigned int pMapId, int x, int y);
             void unloadMap(unsigned int pMapId);
 
-            bool isInLineOfSight(unsigned int pMapId, float x1, float y1, float z1, float x2, float y2, float z2, bool alsom2 = false) ;
+            bool isInLineOfSight(unsigned int pMapId, float x1, float y1, float z1, float x2, float y2, float z2, bool alsom2 = false);
             bool isInLineOfSight2(unsigned int pMapId, float x1, float y1, float z1, float x2, float y2, float z2, bool debug = false, bool alsom2 = false);
+            ModelInstance* FindCollisionModel(unsigned int mapId, float x0, float y0, float z0, float x1, float y1, float z1) override;
             /**
             fill the hit pos and return true, if an object was hit
             */

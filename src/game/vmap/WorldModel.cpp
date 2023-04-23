@@ -22,6 +22,7 @@
 #include "VMapDefinitions.h"
 #include "MapTree.h"
 #include "VMapFactory.h"
+#include "ModelInstance.h"
 
 using G3D::Vector3;
 using G3D::Ray;
@@ -350,7 +351,7 @@ namespace VMAP
     {
         GModelRayCallback(const std::vector<MeshTriangle> &tris, const std::vector<Vector3> &vert):
             vertices(vert.begin()), triangles(tris.begin()), hit(false) {}
-        bool operator()(const G3D::Ray& ray, uint32 entry, float& distance, bool pStopAtFirstHit)
+        bool operator()(const G3D::Ray& ray, uint32 entry, float& distance, bool /*pStopAtFirstHit*/, bool /*ignoreM2Model*/)
         {
             bool result = IntersectTriangle(triangles[entry], vertices, ray, distance);
             if (result)  hit=true;
@@ -361,12 +362,12 @@ namespace VMAP
         bool hit;
     };
 
-    bool GroupModel::IntersectRay(const G3D::Ray &ray, float &distance, bool stopAtFirstHit) const
+    bool GroupModel::IntersectRay(const G3D::Ray &ray, float &distance, bool stopAtFirstHit, bool ignoreM2Model) const
     {
         if (!triangles.size())
             return false;
         GModelRayCallback callback(triangles, vertices);
-        meshTree.intersectRay(ray, callback, distance, stopAtFirstHit);
+        meshTree.intersectRay(ray, callback, distance, stopAtFirstHit, ignoreM2Model);
         return callback.hit;
     }
 
@@ -410,9 +411,9 @@ namespace VMAP
     struct WModelRayCallBack
     {
         WModelRayCallBack(const std::vector<GroupModel> &mod): models(mod.begin()), hit(false), hitID(0){}
-        bool operator()(const G3D::Ray& ray, uint32 entry, float& distance, bool pStopAtFirstHit)
+        bool operator()(const G3D::Ray& ray, uint32 entry, float& distance, bool pStopAtFirstHit, bool ignoreM2Model)
         {
-            bool result = models[entry].IntersectRay(ray, distance, pStopAtFirstHit);
+            bool result = models[entry].IntersectRay(ray, distance, pStopAtFirstHit, ignoreM2Model);
             if (result)
             {
                 hitID = models[entry].GetWmoID();
@@ -425,18 +426,21 @@ namespace VMAP
         bool   hit;
     };
 
-    bool WorldModel::IntersectRay(const G3D::Ray &ray, float &distance, bool stopAtFirstHit) const
+    bool WorldModel::IntersectRay(const G3D::Ray &ray, float &distance, bool stopAtFirstHit, bool ignoreM2Model) const
     {
+        if (ignoreM2Model && (modelFlags & MOD_M2))
+            return false;
+
         // small M2 workaround, maybe better make separate class with virtual intersection funcs
         // in any case, there's no need to use a bound tree if we only have one submodel
         uint32 hitID = 0;
         bool   hit = false;
         if (groupModels.size() == 1)
-            hit = groupModels[0].IntersectRay(ray, distance, stopAtFirstHit);
+            hit = groupModels[0].IntersectRay(ray, distance, stopAtFirstHit, ignoreM2Model);
         else
         {
             WModelRayCallBack isc(groupModels);
-            groupTree.intersectRay(ray, isc, distance, stopAtFirstHit);
+            groupTree.intersectRay(ray, isc, distance, stopAtFirstHit, ignoreM2Model);
             hit = isc.hit;
             hitID = isc.hitID;
         }

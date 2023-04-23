@@ -9,6 +9,11 @@ remove_definitions(
 SET(vmaps_STAT_SRCS
    BIH.h
    BIH.cpp
+   BIHWrap.h
+   DynamicTree.h
+   DynamicTree.cpp
+   GameObjectModel.h
+   GameObjectModel.cpp
    IVMapManager.h
    MapTree.h
    MapTree.cpp
@@ -28,6 +33,7 @@ SET(vmaps_STAT_SRCS
    VMapCluster.cpp
    PipeWrapper.h
    PipeWrapper.cpp
+   RegularGrid.h
 )
 
 add_library(vmaps STATIC ${vmaps_STAT_SRCS})

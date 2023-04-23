@@ -70,6 +70,7 @@ namespace VMAP
             ~StaticMapTree();
 
             bool isInLineOfSight(const G3D::Vector3& pos1, const G3D::Vector3& pos2, bool debug = false, bool alsom2 = false) const;
+            ModelInstance* FindCollisionModel(G3D::Vector3 const& pos1, G3D::Vector3 const& pos2);
             bool getObjectHitPos(const G3D::Vector3& pos1, const G3D::Vector3& pos2, G3D::Vector3& pResultHitPos, float pModifyDist) const;
             float getHeight(const G3D::Vector3& pPos, float maxSearchDist) const;
             bool getAreaInfo(G3D::Vector3 &pos, uint32 &flags, int32 &adtId, int32 &rootId, int32 &groupId) const;

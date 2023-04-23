@@ -86,7 +86,7 @@ namespace VMAP
             //! pass mesh data to object and create BIH. Passed vectors get get swapped with old geometry!
             void setMeshData(std::vector<Vector3> &vert, std::vector<MeshTriangle> &tri);
             void setLiquidData(WmoLiquid *liquid) { iLiquid = liquid; }
-            bool IntersectRay(const G3D::Ray &ray, float &distance, bool stopAtFirstHit) const;
+            bool IntersectRay(const G3D::Ray &ray, float &distance, bool stopAtFirstHit, bool ignoreM2Model = false) const;
             bool IsInsideObject(const Vector3 &pos, const Vector3 &down, float &z_dist) const;
             bool GetLiquidLevel(const Vector3 &pos, float &liqHeight) const;
             uint32 GetLiquidType() const;
@@ -113,20 +113,23 @@ namespace VMAP
     class WorldModel
     {
         public:
-            WorldModel(): RootWMOID(0) {}
+            WorldModel(): RootWMOID(0), modelFlags(0) {}
 
             //! pass group models to WorldModel and create BIH. Passed vector is swapped with old geometry!
             void setGroupModels(std::vector<GroupModel> &models);
             void setRootWmoID(uint32 id) { RootWMOID = id; }
-            bool IntersectRay(const G3D::Ray &ray, float &distance, bool stopAtFirstHite) const;
+            bool IntersectRay(const G3D::Ray &ray, float &distance, bool stopAtFirstHit, bool ignoreM2Model) const;
             bool IntersectPoint(const G3D::Vector3 &p, const G3D::Vector3 &down, float &dist, AreaInfo &info) const;
             bool GetLocationInfo(const G3D::Vector3 &p, const G3D::Vector3 &down, float &dist, LocationInfo &info) const;
             bool writeFile(const std::string &filename);
             bool readFile(const std::string &filename);
+            void setModelFlags(uint32 newFlags) { modelFlags = newFlags; }
+            uint32 getModelFlags() const { return modelFlags; }
         protected:
             uint32 RootWMOID;
             std::vector<GroupModel> groupModels;
             BIH groupTree;
+            uint32 modelFlags;
 
 #ifdef MMAP_GENERATOR
         public:

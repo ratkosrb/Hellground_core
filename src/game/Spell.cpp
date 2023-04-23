@@ -1882,8 +1882,46 @@ void Spell::SetTargetMap(uint32 i, uint32 cur)
 
             if (cur == TARGET_LOCATION_CASTER_FRONT_LEAP)
             {
-                m_caster->GetLeapForwardDestination(pos, dist);
-                m_targets.setDestination(pos.x, pos.y, pos.z);
+                float x, y, z;
+                float srcX, srcY, srcZ;
+                float zSearchDist = 20.0f; // Falling case
+                float ground = 0.0f;
+                m_caster->GetPosition(x, y, z);
+                m_caster->GetPosition(srcX, srcY, srcZ);
+                float waterLevel = m_caster->GetTerrain()->GetWaterLevel(x, y, z, &ground);
+                x += dist * cos(m_caster->GetOrientation());
+                y += dist * sin(m_caster->GetOrientation());
+                // Underwater blink case
+                if (waterLevel != VMAP_INVALID_HEIGHT_VALUE && waterLevel > ground)
+                {
+                    if (z < ground)
+                        z = ground;
+                    // If blinking up to the surface, limit z position (do not teleport out of water)
+                    if (z > waterLevel && (z - srcZ) > 1.0f)
+                    {
+                        float t = (waterLevel - srcZ) / (z - srcZ);
+                        x = (x - srcX) * t + srcX;
+                        y = (y - srcY) * t + srcY;
+                        z = waterLevel;
+                    }
+                    m_caster->GetMap()->GetLosHitPosition(srcX, srcY, srcZ, x, y, z, -0.5f);
+                    ground = m_caster->GetMap()->GetHeight(x, y, z);
+                    if (ground < z)
+                    {
+                        m_targets.setDestination(x, y, z);
+                        break;
+                    }
+                    // If we are leaving water, rather use pathfinding, but increase z-range position research.
+                    zSearchDist = 20.0f;
+                }
+                if (!m_caster->GetMap()->GetWalkHitPosition(nullptr, srcX, srcY, srcZ, x, y, z, NAV_GROUND | NAV_WATER, zSearchDist, false))
+                {
+                    x = srcX;
+                    y = srcY;
+                    z = srcZ;
+                }
+
+                m_targets.setDestination(x, y, z);
                 break;
             }
 

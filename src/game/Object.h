@@ -35,6 +35,7 @@
 #include <string>
 
 #define DEFAULT_WORLD_OBJECT_SIZE   0.388999998569489f      // player size, also currently used (correctly?) for any non Unit world objects
+#define DEFAULT_OBJECT_SCALE        1.0f                    // player/item scale as default, npc/go from database, pets from dbc
 #define MAX_STEALTH_DETECT_RANGE    45.0f
 #define DEFAULT_COMBAT_REACH        1.5f
 #define NOMINAL_MELEE_RANGE         5.0f
@@ -151,6 +152,11 @@ class HELLGROUND_IMPORT_EXPORT Object
         PackedGuid const& GetPackGUID() const { return m_PackGUID; }
         uint32 GetEntry() const { return GetUInt32Value(OBJECT_FIELD_ENTRY); }
         void SetEntry(uint32 entry) { SetUInt32Value(OBJECT_FIELD_ENTRY, entry); }
+
+        float GetObjectScale() const
+        {
+            return m_floatValues[OBJECT_FIELD_SCALE_X] ? m_floatValues[OBJECT_FIELD_SCALE_X] : DEFAULT_OBJECT_SCALE;
+        }
 
         uint8 GetTypeId() const { return m_objectTypeId; }
         bool isType(uint16 mask) const { return (mask & m_objectType); }

@@ -97,13 +97,26 @@ static inline void limitDigits(float &value, int digits)
 
 class BIH
 {
-    public:
-        BIH() {};
-        template< class T, class BoundsFunc >
-        void build(const std::vector<T> &primitives, BoundsFunc &getBounds, uint32 leafSize = 3, bool printStats=false)
+    private:
+        void init_empty()
         {
-            if(primitives.size() == 0)
+            tree.clear();
+            objects.clear();
+            // create space for the first node
+            tree.push_back(static_cast<uint32>(3 << 30)); // dummy leaf
+            tree.insert(tree.end(), 2, 0);
+        }
+
+    public:
+        BIH() {init_empty();}
+        template< class BoundsFunc, class PrimArray >
+        void build(PrimArray const& primitives, BoundsFunc& getBounds, uint32 leafSize = 3, bool printStats = false)
+        {
+            if (primitives.size() == 0)
+            {
+                init_empty();
                 return;
+            }
             buildData dat;
             dat.maxPrims = leafSize;
             dat.numPrims = primitives.size();
@@ -134,7 +147,7 @@ class BIH
         uint32 primCount() { return objects.size(); }
 
         template<typename RayCallback>
-        void intersectRay(const Ray &r, RayCallback& intersectCallback, float &maxDist, bool stopAtFirst=false) const
+        void intersectRay(const Ray &r, RayCallback& intersectCallback, float &maxDist, bool stopAtFirst = false, bool ignoreM2Model = false) const
         {
             float intervalMin = -1.0f;
             float intervalMax = -1.0f;
@@ -261,7 +274,7 @@ class BIH
                             int n = tree[node + 1];
                             while (n > 0)
                             {
-                                bool hit = intersectCallback(r, objects[offset], maxDist, stopAtFirst);
+                                bool hit = intersectCallback(r, objects[offset], maxDist, stopAtFirst, ignoreM2Model);
                                 if(stopAtFirst && hit)
                                     return;
                                 --n;

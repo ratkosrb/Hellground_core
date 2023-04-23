@@ -42,6 +42,7 @@
 #include "OutdoorPvPMgr.h"
 #include "BattleGroundAV.h"
 #include "Map.h"
+#include "vmap/GameObjectModel.h"
 #include "ScriptMgr.h"
 
 GameObject::GameObject() : WorldObject()
@@ -62,12 +63,14 @@ GameObject::GameObject() : WorldObject()
     m_cooldownTime.Reset(0);
     m_goInfo = NULL;
     m_goData = NULL;
+    m_model = NULL;
 
     m_DBTableGuid = 0;
 }
 
 GameObject::~GameObject()
 {
+    delete m_model;
     CleanupsBeforeDelete();
 }
 
@@ -126,7 +129,13 @@ void GameObject::AddToWorld()
 
         if (m_zoneScript)
             m_zoneScript->OnGameObjectCreate(this, true);
+
+        if (m_model)
+            GetMap()->InsertGameObjectModel(*m_model);
     }
+
+    // After Object::AddToWorld so that for initial state the GO is added to the world (and hence handled correctly)
+    UpdateCollisionState();
 }
 
 void GameObject::RemoveFromWorld()
@@ -136,6 +145,9 @@ void GameObject::RemoveFromWorld()
     {
         if (m_zoneScript)
             m_zoneScript->OnGameObjectCreate(this, false);
+
+        if (m_model && GetMap()->ContainsGameObjectModel(*m_model))
+            GetMap()->RemoveGameObjectModel(*m_model);
 
         WorldObject::RemoveFromWorld();
         GetMap()->RemoveFromObjMap(GetGUID());
@@ -187,9 +199,8 @@ bool GameObject::Create(uint32 guidlow, uint32 name_id, Map *map, float x, float
     SetUInt32Value(GAMEOBJECT_FACTION, goinfo->faction);
     SetUInt32Value(GAMEOBJECT_FLAGS, goinfo->flags);
 
-    SetUInt32Value(OBJECT_FIELD_ENTRY, goinfo->id);
-
-    SetUInt32Value(GAMEOBJECT_DISPLAYID, goinfo->displayId);
+    SetEntry(goinfo->id);
+    SetDisplayId(goinfo->displayId);
 
     SetGoState(go_state);
     SetGoType(GameobjectTypes(goinfo->type));
@@ -1544,6 +1555,60 @@ void GameObject::UpdateRotationFields(float rotation2 /*=0.0f*/, float rotation3
 
     SetFloatValue(GAMEOBJECT_ROTATION+2, rotation2);
     SetFloatValue(GAMEOBJECT_ROTATION+3, rotation3);
+}
+
+void GameObject::SetLootState(LootState state)
+{
+    m_lootState = state;
+    UpdateCollisionState();
+}
+
+void GameObject::SetGoState(GOState state)
+{
+    //SetByteValue(GAMEOBJECT_BYTES_1, 0, state); // 3.3.5
+    SetUInt32Value(GAMEOBJECT_STATE, state);
+    UpdateCollisionState();
+}
+
+void GameObject::SetDisplayId(uint32 modelId)
+{
+    SetUInt32Value(GAMEOBJECT_DISPLAYID, modelId);
+    UpdateModel();
+}
+
+void GameObject::UpdateCollisionState()
+{
+    if (!m_model || !IsInWorld())
+        return;
+
+    bool enabled = GetGoType() == GAMEOBJECT_TYPE_CHEST ? getLootState() == GO_READY : GetGoState() == GO_STATE_READY;
+    m_model->enable(enabled);
+}
+
+void GameObject::UpdateModel()
+{
+    if (m_model)
+    {
+        if (IsInWorld() && GetMap()->ContainsGameObjectModel(*m_model))
+            GetMap()->RemoveGameObjectModel(*m_model);
+        delete m_model;
+    }
+    m_model = GameObjectModel::construct(this);
+    if (m_model && IsInWorld())
+        GetMap()->InsertGameObjectModel(*m_model);
+}
+
+void GameObject::UpdateModelPosition()
+{
+    if (!m_model)
+        return;
+
+    if (GetMap()->ContainsGameObjectModel(*m_model))
+    {
+        GetMap()->RemoveGameObjectModel(*m_model);
+        m_model->Relocate(*this);
+        GetMap()->InsertGameObjectModel(*m_model);
+    }
 }
 
 float GameObject::GetObjectBoundingRadius() const

@@ -84,6 +84,8 @@ class PathFinder
         PointsArray& getPath() { return m_pathPoints; }
         PathType getPathType() const { return m_type; }
 
+        static dtPolyRef FindWalkPoly(dtNavMeshQuery const* query, float const* pointYZX, dtQueryFilter const& filter, float* closestPointYZX, float zSearchDist = 10.0f);
+
     private:
 
         dtPolyRef      m_pathPolyRefs[MAX_PATH_LENGTH];   // array of detour polygon references

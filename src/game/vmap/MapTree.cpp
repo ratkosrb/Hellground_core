@@ -37,11 +37,11 @@ namespace VMAP
     class MapRayCallback
     {
         public:
-            MapRayCallback(ModelInstance *val,bool debug = false, bool alsom2 = false):
-                prims(val), hit(false), m_debug(debug), m_alsom2(alsom2) {}
-            bool operator()(const G3D::Ray& ray, uint32 entry, float& distance, bool pStopAtFirstHit=true)
+            MapRayCallback(ModelInstance *val,bool debug = false):
+                prims(val), hit(false), m_debug(debug) {}
+            bool operator()(const G3D::Ray& ray, uint32 entry, float& distance, bool pStopAtFirstHit = true, bool ignoreM2Model = false)
             {
-                bool result = prims[entry].intersectRay(ray, distance, pStopAtFirstHit, m_alsom2);
+                bool result = prims[entry].intersectRay(ray, distance, pStopAtFirstHit, ignoreM2Model);
                 if (m_debug && result)
                 {
                     VMapFactory::createOrGetVMapManager()->SetHitModelName(prims[entry].name, entry);
@@ -53,7 +53,23 @@ namespace VMAP
             bool didHit() { return hit; }
         protected:
             ModelInstance *prims;
-            bool hit,m_debug,m_alsom2;
+            bool hit,m_debug;
+    };
+
+    class MapIntersectionFinderCallback
+    {
+    public:
+        MapIntersectionFinderCallback(ModelInstance* val) : result(nullptr), prims(val) {}
+        bool operator()(G3D::Ray const& ray, uint32 entry, float& distance, bool pStopAtFirstHit = true, bool ignoreM2Model = false)
+        {
+            bool hit = prims[entry].intersectRay(ray, distance, pStopAtFirstHit, ignoreM2Model);
+            if (hit && (!result || result->flags & MOD_NO_BREAK_LOS))
+                result = &prims[entry];
+            return hit;
+        }
+        ModelInstance* result;
+    protected:
+        ModelInstance* prims;
     };
 
     class AreaInfoCallback
@@ -151,8 +167,8 @@ namespace VMAP
     bool StaticMapTree::getIntersectionTime(const G3D::Ray& pRay, float &pMaxDist, bool pStopAtFirstHit, bool debug, bool alsom2) const
     {
         float distance = pMaxDist;
-        MapRayCallback intersectionCallBack(iTreeValues, debug, alsom2);
-        iTree.intersectRay(pRay, intersectionCallBack, distance, pStopAtFirstHit);
+        MapRayCallback intersectionCallBack(iTreeValues, debug);
+        iTree.intersectRay(pRay, intersectionCallBack, distance, pStopAtFirstHit, !alsom2);
         if (intersectionCallBack.didHit())
             pMaxDist = distance;
         return intersectionCallBack.didHit();
@@ -174,6 +190,22 @@ namespace VMAP
 
         return true;
     }
+    //=========================================================
+
+    ModelInstance* StaticMapTree::FindCollisionModel(G3D::Vector3 const& pos1, G3D::Vector3 const& pos2)
+    {
+        float maxDist = (pos2 - pos1).magnitude();
+        if (maxDist < 1e-10f)
+            return nullptr;
+        G3D::Ray ray = G3D::Ray::fromOriginAndDirection(pos1, (pos2 - pos1) / maxDist);
+
+        MapIntersectionFinderCallback intersectionCallBack(iTreeValues);
+        iTree.intersectRay(ray, intersectionCallBack, maxDist, true);
+        if (intersectionCallBack.result)
+            return intersectionCallBack.result;
+        return nullptr;
+    }
+
     //=========================================================
     /**
     When moving from pos1 to pos2 check if we hit an object. Return true and the position if we hit one

@@ -584,6 +584,23 @@ bool PathFinder::HaveTile(const Vector3 &p) const
     return (m_navMesh->getTileAt(tx, ty) != NULL);
 }
 
+dtPolyRef PathFinder::FindWalkPoly(dtNavMeshQuery const* query, float const* pointYZX, dtQueryFilter const& filter, float* closestPointYZX, float zSearchDist)
+{
+    ASSERT(query);
+
+    // WARNING : Nav mesh coords are Y, Z, X (and not X, Y, Z)
+    float extents[3] = { 5.0f, zSearchDist, 5.0f };
+    dtPolyRef polyRef;
+
+    // Default recastnavigation method
+    if (DT_SUCCESS != (query->findNearestPoly(pointYZX, extents, &filter, &polyRef, closestPointYZX)))
+        return 0;
+    // Do not select points over player pos
+    if (closestPointYZX[1] > pointYZX[1] + 3.0f)
+        return 0;
+    return polyRef;
+}
+
 uint32 PathFinder::fixupCorridor(dtPolyRef* path, uint32 npath, uint32 maxPath,
                                const dtPolyRef* visited, uint32 nvisited)
 {

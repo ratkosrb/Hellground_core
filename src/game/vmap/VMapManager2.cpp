@@ -180,6 +180,20 @@ namespace VMAP
         return result;
     }
 
+    ModelInstance* VMapManager2::FindCollisionModel(unsigned int mapId, float x0, float y0, float z0, float x1, float y1, float z1)
+    {
+        ModelInstance* result = nullptr;
+        InstanceTreeMap::iterator instanceTree = iInstanceMapTrees.find(mapId);
+        if (instanceTree != iInstanceMapTrees.end())
+        {
+            Vector3 pos1 = convertPositionToInternalRep(x0, y0, z0);
+            Vector3 pos2 = convertPositionToInternalRep(x1, y1, z1);
+            if (pos1 != pos2)
+                result = instanceTree->second->FindCollisionModel(pos1, pos2);
+        }
+        return result;
+    }
+
     //=========================================================
     /**
     get the hit position and return true if we hit something

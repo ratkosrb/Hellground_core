@@ -33,10 +33,17 @@
 #include "GridMap.h"
 #include "GameSystem/GridRefManager.h"
 #include "MapRefManager.h"
+#include "vmap/DynamicTree.h"
+#include "G3D/Vector3.h"
 #include "mersennetwister/MersenneTwister.h"
 
 #include <bitset>
 #include <list>
+
+namespace VMAP
+{
+    class ModelInstance;
+};
 
 class Unit;
 class Creature;
@@ -49,6 +56,7 @@ class Player;
 class WorldObject;
 class CreatureGroup;
 class BattleGround;
+class Transport;
 
 class GridMap;
 class TerrainInfo;
@@ -273,8 +281,58 @@ class HELLGROUND_IMPORT_EXPORT Map : public GridRefManager<NGridType>
         void ForcedUnload();
 
         // Dynamic VMaps
+        float GetHeight(float x, float y, float z, bool vmap = true, float maxSearchDist = 10.0f) const;
         bool GetHeightInRange(float x, float y, float& z, float maxSearchDist = 4.0f) const;
-        bool GetHitPosition(float srcX, float srcY, float srcZ, float& destX, float& destY, float& destZ, float modifyDist) const;
+        bool IsInLineOfSight(float x1, float y1, float z1, float x2, float y2, float z2, bool checkDynLos = true, bool ignoreM2Model = true) const;
+        bool GetLosHitPosition(float srcX, float srcY, float srcZ, float& destX, float& destY, float& destZ, float modifyDist) const;
+        // Use navemesh to walk
+        bool GetWalkHitPosition(Transport* t, float srcX, float srcY, float srcZ, float& destX, float& destY, float& destZ,
+            uint32 moveAllowedFlags = 0xF /*NAV_GROUND | NAV_WATER | NAV_MAGMA | NAV_SLIME*/, float zSearchDist = 20.0f, bool locatedOnSteepSlope = true) const;
+        VMAP::ModelInstance* FindCollisionModel(float x1, float y1, float z1, float x2, float y2, float z2);
+
+        void Balance() { _dynamicTree.balance(); }
+        void RemoveGameObjectModel(GameObjectModel const& model)
+        {
+            _dynamicTree_lock.acquire_write();
+            _dynamicTree.remove(model);
+            _dynamicTree.balance();
+            _dynamicTree_lock.release();
+        }
+        void InsertGameObjectModel(GameObjectModel const& model)
+        {
+            _dynamicTree_lock.acquire_write();
+            _dynamicTree.insert(model);
+            _dynamicTree.balance();
+            _dynamicTree_lock.release();
+        }
+        bool ContainsGameObjectModel(GameObjectModel const& model) const
+        {
+            _dynamicTree_lock.acquire_read();
+            bool r = _dynamicTree.contains(model);
+            _dynamicTree_lock.release();
+            return r;
+        }
+        bool GetDynamicObjectHitPos(G3D::Vector3 start, G3D::Vector3 end, G3D::Vector3& out, float finalDistMod) const
+        {
+            _dynamicTree_lock.acquire_read();
+            bool r = _dynamicTree.getObjectHitPos(start, end, out, finalDistMod);
+            _dynamicTree_lock.release();
+            return r;
+        }
+        float GetDynamicTreeHeight(float x, float y, float z, float maxSearchDist) const
+        {
+            _dynamicTree_lock.acquire_read();
+            float r = _dynamicTree.getHeight(x, y, z, maxSearchDist);
+            _dynamicTree_lock.release();
+            return r;
+        }
+        bool CheckDynamicTreeLoS(float x1, float y1, float z1, float x2, float y2, float z2, bool ignoreM2Model) const
+        {
+            _dynamicTree_lock.acquire_read();
+            bool r = _dynamicTree.isInLineOfSight(x1, y1, z1, x2, y2, z2, ignoreM2Model);
+            _dynamicTree_lock.release();
+            return r;
+        }
 
         // Random on map generation
         bool GetReachableRandomPosition(Unit* unit, float& x, float& y, float& z, float radius, bool randomRange = true) const;
@@ -348,6 +406,9 @@ class HELLGROUND_IMPORT_EXPORT Map : public GridRefManager<NGridType>
         Timer m_unloadTimer;
 
         float m_ActiveObjectUpdateDistance;
+
+        mutable ACE_RW_Mutex   _dynamicTree_lock;
+        DynamicMapTree _dynamicTree;
 
         MapRefManager m_mapRefManager;
         MapRefManager::iterator m_mapRefIter;

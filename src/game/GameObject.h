@@ -358,6 +358,18 @@ struct GameObjectInfo
         } raw;
     };
 
+    bool IsServerOnly() const
+    {
+        switch (type)
+        {
+            case GAMEOBJECT_TYPE_GENERIC: return _generic.serverOnly;
+            case GAMEOBJECT_TYPE_TRAP: return trap.serverOnly;
+            case GAMEOBJECT_TYPE_SPELL_FOCUS: return spellFocus.serverOnly;
+            case GAMEOBJECT_TYPE_AURA_GENERATOR: return auraGenerator.serverOnly;
+            default: return false;
+        }
+    }
+
     uint32 GetEventScriptId() const
     {
         switch(type)
@@ -547,13 +559,21 @@ class HELLGROUND_IMPORT_EXPORT GameObject : public WorldObject
         void SetGoType(GameobjectTypes type) { SetUInt32Value(GAMEOBJECT_TYPE_ID, type); }
 
         GOState GetGoState() const { return GOState(GetUInt32Value(GAMEOBJECT_STATE)); }
-        void SetGoState(GOState state) { SetUInt32Value(GAMEOBJECT_STATE, state); }
+        void SetGoState(GOState state);
 
         uint32 GetGoArtKit() const { return GetUInt32Value(GAMEOBJECT_ARTKIT); }
         void SetGoArtKit(uint32 artkit);
 
         uint32 GetGoAnimProgress() const { return GetUInt32Value(GAMEOBJECT_ANIMPROGRESS); }
         void SetGoAnimProgress(uint32 animprogress) { SetUInt32Value(GAMEOBJECT_ANIMPROGRESS, animprogress); }
+
+        uint32 GetDisplayId() const { return GetUInt32Value(GAMEOBJECT_DISPLAYID); }
+        void SetDisplayId(uint32 modelId);
+
+        void UpdateCollisionState();
+        void UpdateModel();                                 // updates model in case displayId were changed
+        GameObjectModel* m_model;
+        void UpdateModelPosition();
 
         float GetObjectBoundingRadius() const;              // overwrite WorldObject version
 
@@ -562,7 +582,7 @@ class HELLGROUND_IMPORT_EXPORT GameObject : public WorldObject
 
         void Use(Unit* user);
 
-        void SetLootState(LootState s) { m_lootState = s; }
+        void SetLootState(LootState s);
         LootState getLootState() const { return m_lootState; }
 
         void AddToSkillupList(uint32 PlayerGuidLow) { m_SkillupList.push_back(PlayerGuidLow); }

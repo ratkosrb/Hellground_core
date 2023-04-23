@@ -80,6 +80,8 @@ float World::m_VisibleObjectGreyDistance      = 0;
 int32 World::m_activeObjectUpdateDistanceOnContinents = DEFAULT_VISIBILITY_DISTANCE;
 int32 World::m_activeObjectUpdateDistanceInInstances = DEFAULT_VISIBILITY_DISTANCE;
 
+void LoadGameObjectModelList();
+
 /// World constructor
 World::World()
 {
@@ -1447,6 +1449,9 @@ void World::SetInitialWorldSettings()
     ///- Initilize static helper structures
     AIRegistry::Initialize();
     Player::InitVisibleBits();
+
+    sLog.outString("Loading GameObject models ...");
+    LoadGameObjectModelList();
 
     ///- Initialize MapManager
     sLog.outString("Starting Map System");
