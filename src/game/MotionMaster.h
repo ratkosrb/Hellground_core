@@ -24,9 +24,6 @@
 #include "SharedDefines.h"
 #include "StateMgrImpl.h"
 
-#include <stack>
-#include <vector>
-
 class PathFinder;
 class MovementGenerator;
 class Unit;

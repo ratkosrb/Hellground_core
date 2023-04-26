@@ -26,7 +26,6 @@
 #include "Spell.h"
 #include "SpellAuras.h"
 #include "Chat.h"
-#include <random>
 
 enum PartyBotSpells
 {
