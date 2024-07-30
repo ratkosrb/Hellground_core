@@ -33,16 +33,6 @@ add_library(framework STATIC
   ${framework_SRCS}
 )
 
-if(NOT USE_STD_MALLOC)
-  if(NOT TBB_USE_EXTERNAL)
-    add_dependencies(framework TBB_Project)
-  # add_dependencies(framework tbb)
-  # add_dependencies(framework tbbmalloc)
-  endif()
-  target_link_libraries(framework
-  ${TBB_LIBRARIES}
-  )
-endif()
 if(NOT ACE_USE_EXTERNAL)
   add_dependencies(framework ACE_Project)
 # add_dependencies(framework ace)

@@ -77,9 +77,7 @@ message(
     DEBUG : Debug mode
 	NOT_USE_ELUNA_HOOKS: Do not use Elunas HookMgr
     CLI   : Build with CLI (default)
-    TBB_USE_EXTERNAL: Use external TBB library instead of built in (default)
     ACE_USE_EXTERNAL: Use external ACE library instead of built in (default)
-    USE_STD_MALLOC  : Use standard malloc instead of TBB
     LARGE_CELL      : Use large cell size
     ADD_COMPILE_F   : Add additional compile flags (default)
     ADD_OPTI_F      : Add additional compile optimization flags
@@ -124,8 +122,6 @@ endif()
 
 option(DEBUG "Debug mode" 0)
 option(CLI "With CLI" 1)
-option(TBB_USE_EXTERNAL "Use external TBB" 1)
-option(USE_STD_MALLOC "Use standard malloc instead of TBB" 0)
 option(ACE_USE_EXTERNAL "Use external ACE" 1)
 option(LARGE_CELL "Use large cell size" 0)
 option(NOT_USE_ELUNA_HOOKS "Do not use Elunas HookMgr" 1)
@@ -198,25 +194,6 @@ if(ACE_USE_EXTERNAL)
   endif()
 else()
   include(cmake/ImportACE.cmake)
-endif()
-
-if (NOT USE_STD_MALLOC)
-  unset(TBB_INCLUDE_DIR CACHE)
-  unset(TBB_LIBRARIES CACHE)
-  unset(TBB_LIBRARIES_DIR CACHE)
-  unset(TBB_INCLUDE_DIR)
-  unset(TBB_LIBRARIES)
-  unset(TBB_LIBRARIES_DIR)
-  if(TBB_USE_EXTERNAL)
-    find_package(TBB)
-    if(NOT TBB_FOUND)
-      message(FATAL_ERROR
-        "This project requires TBB installed when TBB_USE_EXTERNAL is set. Please download the TBB Stable Release from http://www.threadingbuildingblocks.org/ and install it. If this script didn't find TBB and it was correctly installed please set TBB_ROOT to the correct path."
-      )
-    endif()
-  else()
-    include(cmake/ImportTBB.cmake)
-  endif()
 endif()
 
 # Win32 delifered packages
@@ -459,9 +436,6 @@ set(DEFINITIONS_DEBUG _DEBUG MANGOS_DEBUG)
 if(WIN32)
   set(DEFINITIONS ${DEFINITIONS} WIN32 _WIN32)
   set(DEFINITIONS_RELEASE ${DEFINITIONS_RELEASE} _CRT_SECURE_NO_WARNINGS)
-endif()
-if(USE_STD_MALLOC)
-	set(DEFINITIONS ${DEFINITIONS} USE_STANDARD_MALLOC)
 endif()
 
 if(NOT_USE_ELUNA_HOOKS)
