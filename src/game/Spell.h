@@ -782,6 +782,10 @@ namespace Hellground
                         if (!itr->getSource()->isTargetableForAttack())
                             continue;
 
+                        // Negative AoE from non flagged players cannot target other players
+                        if (!i_caster->CanAttackWithoutEnablingPvP(itr->getSource()))
+                            continue;
+
                         Unit* check = i_caster->GetCharmerOrOwnerOrSelf();
 
                         if (check->GetTypeId()==TYPEID_PLAYER)

@@ -908,7 +908,7 @@ class HELLGROUND_IMPORT_EXPORT Unit : public WorldObject
         uint64 getVictimGUID() const { return m_attacking ? m_attacking->GetGUID() : 0; }
         void CombatStop(bool cast = false);
         void CombatStopWithPets(bool cast = false);
-        Unit* SelectNearbyTarget(float dist = NOMINAL_MELEE_RANGE, Unit* target = NULL) const;
+        Unit* SelectNearbyTarget(float dist = NOMINAL_MELEE_RANGE, Unit* target = NULL, bool inFront = false, bool isValidAttackTarget = false, bool notPvpEnabling = false) const;
         uint8 Unit::GetEnemyCountInRadiusAround(Unit* pTarget, float radius) const;
         void SendMeleeAttackStop(Unit* victim);
         void SendMeleeAttackStart(uint64 victimGUID);
@@ -1123,6 +1123,7 @@ class HELLGROUND_IMPORT_EXPORT Unit : public WorldObject
         bool isTargetableForAttack() const;
         bool isAttackableByAOE() const;
         bool canAttack(Unit const* target, bool force = true) const;
+        bool CanAttackWithoutEnablingPvP(Unit const* pTarget) const;
         virtual bool IsInWater() const;
         virtual bool IsUnderWater() const;
         bool isInAccessiblePlacefor (Creature const* c) const;

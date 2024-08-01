@@ -526,8 +526,8 @@ namespace Hellground
             bool operator()(Unit* u)
             {
                 if (u->isTargetableForAttack() && i_obj->IsWithinDistInMap(u, i_range) &&
-                    (i_funit->IsHostileTo(u) || (!i_funit->IsFriendlyTo(u) && u->IsInCombat()))
-                    && u->isVisibleForOrDetect(i_funit, i_funit, false))
+                   (i_funit->IsHostileTo(u) || (!i_funit->IsFriendlyTo(u) && u->IsInCombat())) &&
+                    i_funit->CanAttackWithoutEnablingPvP(u) && u->isVisibleForOrDetect(i_funit, i_funit, false))
                 {
                     i_range = i_obj->GetDistance(u);        // use found unit range as new range limit for next check
                     return true;
@@ -561,12 +561,17 @@ namespace Hellground
                 // Check contains checks for: live, non-selectable, non-attackable flags, invisibility mask, flight check and GM check, ignore totems
                 if (!u->isTargetableForAttack())
                     return false;
+
                 if (i_obj->GetTypeId()==TYPEID_UNIT || i_obj->GetTypeId()==TYPEID_PLAYER)   // cant target when out of phase -> invisibility 10
                 {
                     if (u->m_invisibilityMask && u->m_invisibilityMask & (1 << 10) && !u->canDetectInvisibilityOf((Unit*)i_obj))
                         return false;
                 }
+
                 if (u->GetTypeId()==TYPEID_UNIT && ((Creature*)u)->isTotem())
+                    return false;
+
+                if (!i_funit->CanAttackWithoutEnablingPvP(u))
                     return false;
 
                 if ((i_targetForPlayer ? !i_funit->IsFriendlyTo(u) : i_funit->IsHostileTo(u))&& i_obj->IsWithinDistInMap(u, i_range))

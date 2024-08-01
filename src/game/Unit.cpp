@@ -5232,7 +5232,7 @@ bool Unit::HandleHasteAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAu
                 case 13877:
                 case 33735:
                 {
-                    target = SelectNearbyTarget(8.0f);
+                    target = SelectNearbyTarget(8.0f, nullptr, false, true, true);
                     if (!target)
                         return false;
                     basepoints0 = damage;
@@ -5318,7 +5318,10 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAu
                     if (procSpell && procSpell->Id == 12723)
                         return false;
 
-                    target = SelectNearbyTarget(8.0f, target);
+                    // World of Warcraft Client Patch 1.7.0 (2005-09-13)
+                    // - Sweeping Strikes will now ignore dead targets, and will ignore PvP
+                    //   enabled targets if you are not PvP enabled.
+                    target = SelectNearbyTarget(8.0f, target, false, true, true);
                     if (!target)
                         return false;
 
@@ -9746,6 +9749,16 @@ bool Unit::canAttack(Unit const* target, bool force) const
     return true;
 }
 
+bool Unit::CanAttackWithoutEnablingPvP(Unit const* pTarget) const
+{
+    if (Player* attackedPlayer = pTarget->GetCharmerOrOwnerPlayerOrPlayerItself())
+        if (Player* casterPlayer = GetCharmerOrOwnerPlayerOrPlayerItself())
+            if (!casterPlayer->IsPvP() && !(casterPlayer->IsFFAPvP() && attackedPlayer->IsFFAPvP()) && !casterPlayer->IsInDuelWith(attackedPlayer))
+                return false;
+
+    return true;
+}
+
 bool Unit::isAttackableByAOE() const
 {
     // creatures that should not be damaged by AoE spells
@@ -11944,7 +11957,7 @@ uint8 Unit::GetEnemyCountInRadiusAround(Unit* pTarget, float radius) const
     return targets.size();
 }
 
-Unit* Unit::SelectNearbyTarget(float dist, Unit* erase) const
+Unit* Unit::SelectNearbyTarget(float dist, Unit* erase /*= nullptr*/, bool inFront /*= false*/, bool isValidAttackTarget /*= false*/, bool notPvpEnabling /*= false*/) const
 {
     std::list<Unit *> targets;
     Hellground::AnyUnfriendlyUnitInObjectRangeCheck u_check(this, this, dist);
@@ -11961,10 +11974,12 @@ Unit* Unit::SelectNearbyTarget(float dist, Unit* erase) const
     // remove not LoS targets
     for (std::list<Unit *>::iterator tIter = targets.begin(); tIter != targets.end();)
     {
-        if (!IsWithinLOSInMap(*tIter) || (*tIter)->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE) ||
-            (*tIter)->GetTypeId() == TYPEID_UNIT && (
-                (((Creature*)(*tIter))->isCivilian() && !(*tIter)->IsInCombat()) ||
-                ((Creature*)(*tIter))->isTrigger() || ((Creature*)(*tIter))->isTotem()))
+        if (!IsWithinLOSInMap(*tIter) || 
+           (inFront && !this->HasInArc(M_PI_F / 2 , *tIter)) ||
+           (isValidAttackTarget && !canAttack(*tIter)) ||
+           (notPvpEnabling && !CanAttackWithoutEnablingPvP(*tIter)) ||
+           (*tIter)->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE) ||
+           (*tIter)->GetTypeId() == TYPEID_UNIT && ((((Creature*)(*tIter))->isCivilian() && !(*tIter)->IsInCombat()) || ((Creature*)(*tIter))->isTrigger() || ((Creature*)(*tIter))->isTotem()))
         {
             std::list<Unit *>::iterator tIter2 = tIter;
             ++tIter;

@@ -43,7 +43,7 @@ Unit* PlayerAI::SelectNewVictim()
     Cell::VisitAllObjects(me, searcher, 100);
     // no appropriate targets, try non player
     if (targets.empty())
-        return me->SelectNearbyTarget(100);
+        return me->SelectNearbyTarget(100, nullptr, false, true, true);
 
     // if there are any non-charmed players around attack them first
     bool anyenemy = false;
