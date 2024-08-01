@@ -5783,6 +5783,13 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAu
                 if (!HasInArc(M_PI, pVictim))
                     return false;
 
+                // World of Warcraft Client Patch 1.7.0 (2005-09-13)
+                // - Retaliation - Will now cause a maximum of 30 retaliatory strikes in
+                //  15 seconds.In addition, retaliatory strikes will not be possible
+                //  while stunned.
+                if (HasUnitState(UNIT_STAT_CAN_NOT_REACT))
+                    return false;
+
                 triggered_spell_id = 22858;
                 break;
             }
